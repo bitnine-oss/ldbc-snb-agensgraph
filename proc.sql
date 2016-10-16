@@ -65,13 +65,13 @@ begin
 	for i in 1..array_length(path_nodes, 1) - 1 loop
 		prev := path_nodes[i - 1];
 		curr := path_nodes[i];
-		execute 'match p=($1)<-[:hasCreator]-(:\"Comment\")-[:replyOf]->(:Post)-[:hasCreator]->($2)'
+		execute 'match p=($1)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->($2)'
 			|| 'return p'
 			into p1 using curr, prev;
-		execute 'match p=($1)<-[:hasCreator]-(:\"Comment\")-[:replyOf]->(:Post)-[:hasCreator]->($2)'
+		execute 'match p=($1)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->($2)'
 			|| 'return p'
 			into p2 using prev, curr;
-		execute 'match p=($1)-[:hasCreator]-(:\"Comment\")-[:replyOf]->(:Comment)-[:hasCreator]-($2)'
+		execute 'match p=($1)-[:hasCreator]-(:"Comment")-[:replyOf]->(:Comment)-[:hasCreator]-($2)'
 			|| 'return p'
 			into p3 using prev, curr;
 
@@ -86,7 +86,7 @@ create or replace function extract_ids(path_nodes vertex[])
 returns jsonb as $$
 declare
 	n vertex;
-	arr int8;
+	arr int8[];
 begin
 	foreach n in array path_nods
 	loop

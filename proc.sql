@@ -1,28 +1,3 @@
-create or replace function live_in(friend_id int8, country_id int8)
-returns boolean as $$
-declare
-	ret boolean;
-begin
-	execute 'match (f:Person {''id'': $1})-[:isLocatedIn]->()-[:isPartOf]->(:Place {''id'': $2}) '
-		|| 'return count(f) > 0'
-		into ret using friend_id, country_id;
-	return ret;
-end
-$$ language plpgsql;
-
--- used in complex query 4, complex query 10
-create or replace function knows(person1_id int8, person2_id int8)
-returns boolean as $$
-declare
-	ret boolean;
-begin
-	execute 'match (:Person {''id'': $1})-[:knows]->(f:Person {''id'': $2}) '
-		|| 'return count(f) > 0'
-		into ret using person1_id, person2_id;
-	return ret;
-end
-$$ language plpgsql;
-
 -- used in complex query 10
 create or replace function c10_fc(posts vertex[])
 returns vertex[] as $$

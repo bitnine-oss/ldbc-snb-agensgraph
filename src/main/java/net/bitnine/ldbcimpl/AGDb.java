@@ -213,14 +213,14 @@ public class AGDb extends Db {
                     "(messageX)-[:isLocatedIn]->(countryX:Place) " +
                     "WHERE " +
                     "  person.id != friend.id " +
-                    "  AND not(live_in(friend.id, countryX.id)) " +
+                    "  AND not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryX)) " +
                     "  AND countryX.name = ? AND messageX.creationDate >= ? " +
                     "  AND messageX.creationDate < ? " +
                     "WITH friend, count(DISTINCT messageX) AS xCount " +
                     "MATCH (friend)<-[:hasCreator]-(messageY)-[:isLocatedIn]->(countryY:Place) " +
                     "WHERE " +
                     "  countryY.name= ? " +
-                    "  AND not(live_in(friend.id, countryY.id)) " +
+                    "  AND not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryY)) " +
                     "  AND messageY.creationDate >= ? " +
                     "  AND messageY.creationDate < ? " +
                     "WITH " +
@@ -397,7 +397,7 @@ public class AGDb extends Db {
                     "    ELSE latestLike->'msg'->>'imageFile' " +
                     "  END AS messageContent, " +
                     "  (latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationDate')::int8 AS latencyAsMilli, " +
-                    "  not(knows(liker.id::int8, person.id::int8)) AS isNew " +
+                    "  not exists((liker)-[:knows]->(person))" +
                     "ORDER BY likeTime DESC, personId ASC " +
                     "LIMIT ?";
 
@@ -516,7 +516,7 @@ public class AGDb extends Db {
                     "  ((birthdayMonth = ? AND birthdayDay >= 21) OR " +
                     "   (birthdayMonth = (? % 12)+1 AND birthdayDay < 22)) " +
                     "  AND friend.id != person.id " +
-                    "  AND not (knows(friend.id::int8, person.id::int8)) " +
+                    "  AND not exists((friend)-[:knows]->(person)) " +
                     "WITH DISTINCT friend, city, person " +
                     "OPTIONAL MATCH (friend)<-[:hasCreator]-(post:Post) " +
                     "WITH friend, city, array_remove(array_agg(post), NULL) AS posts, person " +

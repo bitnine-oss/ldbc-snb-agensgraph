@@ -32,25 +32,38 @@ declare
 	weight double precision;
 	prev int8;
 	curr int8;
-	p1 graphpath;
-	p2 graphpath;
-	p3 graphpath;
+	p1 int;
+	p2 int;
+	p3 int;
+	rowcount int;
 begin
 	weight := 0.0;
 	for i in 1..array_length(node_ids, 1) - 1 loop
-		prev := path_nodes[i - 1];
-		curr := path_nodes[i];
-		execute 'match p=(:Person {''id'': $1})<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(:Person {''id'': $2})'
-			|| 'return p'
+		prev := node_ids[i];
+		curr := node_ids[i+1];
+		execute 'match p=(:Person {''id'': $1})<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(:Person {''id'': $2}) '
+			|| 'return length(p)'
 			into p1 using curr, prev;
-		execute 'match p=(:Person {''id'': $1})<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(:Person {''id'': $2})'
-			|| 'return p'
+		GET DIAGNOSTICS rowcount := ROW_COUNT;
+		if rowcount = 0 then
+			p1 := 0;
+		end if;
+		execute 'match p=(:Person {''id'': $1})<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(:Person {''id'': $2}) '
+			|| 'return length(p)'
 			into p2 using prev, curr;
-		execute 'match p=(:Person {''id'': $1})-[:hasCreator]-(:"Comment")-[:replyOf]->(:Comment)-[:hasCreator]-(:Person {''id'': $2})'
-			|| 'return p'
+		GET DIAGNOSTICS rowcount := ROW_COUNT;
+		if rowcount = 0 then
+			p2 := 0;
+		end if;
+		execute 'match p=(:Person {''id'': $1})-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]-(:Person {''id'': $2}) '
+			|| 'return length(p)'
 			into p3 using prev, curr;
+		GET DIAGNOSTICS rowcount := ROW_COUNT;
+		if rowcount = 0 then
+			p3 := 0;
+		end if;
 
-		weight := weight + length(p1) * 1.0 + length(p2) * 1.0 + length(p3) * 0.5;
+		weight := weight + p1 * 1.0 + p2 * 1.0 + p3 * 0.5;
 	end loop;
 
 	return weight;
@@ -63,7 +76,7 @@ declare
 	id int8;
 	arr int8[];
 begin
-	foreach id in array path_nods
+	foreach id in array node_ids
 	loop
 		arr = array_append(arr, id);
 	end loop;
@@ -78,9 +91,6 @@ $BODY$
 DECLARE
     rowcount int;
     iter int;
-	size int;
-	x graphid[]; 
-	i int;
 BEGIN
     -- Create a temporary table for storing the estimates as the algorithm runs
     CREATE TEMP TABLE inter_result1
@@ -185,7 +195,6 @@ $$ language plpgsql;
 create or replace function allshortestpath_vertex_ids(p1_id int8, p2_id int8)
 returns table(vertex_ids int8[]) as $$
 declare
-	vertex_ids int8[];
 	graphids graphid[];
 	p1 graphid;
 	p2 graphid;

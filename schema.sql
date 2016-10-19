@@ -450,7 +450,8 @@ create foreign table fdwKnows
 load from fdwKnows as row
 match (r:Person), (s:Person)
 where (r).id::int8 = (row).person1Id and (s).id::int8 = (row).person2Id
-create (r)-[:knows {'creationDate': (row).creationDate}]->(s);
+create (r)-[:knows {'creationDate': (row).creationDate}]->(s)
+create (r)<-[:knows {'creationDate': (row).creationDate}]-(s);
 --- likes
 create elabel likes;
 drop foreign table fdwLikesPost;

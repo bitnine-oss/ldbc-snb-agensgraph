@@ -654,7 +654,6 @@ public class AGDb extends Db {
                     "  WHEN true THEN -1 " +
                     "  ELSE array_length(vertex_ids, 1) - 1 " +
                     "END AS pathLength";
-            System.out.println("Query 13 : " + ldbcQuery13.person1Id() + ", " +ldbcQuery13.person2Id());
             ResultSet rs = client.executeQuery(stmt, ldbcQuery13.person1Id(), ldbcQuery13.person2Id());
 
             LdbcQuery13Result result = null;
@@ -682,7 +681,6 @@ public class AGDb extends Db {
                     "  calc_weight(vertex_ids) AS weight " +
                     "FROM allshortestpath_vertex_ids(?, ?) " +
                     "ORDER BY weight DESC";
-            System.out.println("Query 14 : " + ldbcQuery14.person1Id() + ", " +ldbcQuery14.person2Id());
             ResultSet rs = client.executeQuery(stmt, ldbcQuery14.person1Id(), ldbcQuery14.person2Id());
 
             List<LdbcQuery14Result> resultList = new ArrayList<>();

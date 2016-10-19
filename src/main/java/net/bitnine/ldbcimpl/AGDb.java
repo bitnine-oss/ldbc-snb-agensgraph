@@ -72,6 +72,8 @@ public class AGDb extends Db {
         registerOperationHandler(LdbcQuery6.class, LdbcQuery6Handler.class);
         registerOperationHandler(LdbcQuery7.class, LdbcQuery7Handler.class);
         registerOperationHandler(LdbcQuery8.class, LdbcQuery8Handler.class);
+        registerOperationHandler(LdbcQuery13.class, LdbcQuery13Handler.class);
+        registerOperationHandler(LdbcQuery14.class, LdbcQuery14Handler.class);
         registerOperationHandler(LdbcShortQuery1PersonProfile.class, LdbcShortQuery1PersonProfileHandler.class);
         registerOperationHandler(LdbcShortQuery3PersonFriends.class, LdbcShortQuery3PersonFriendsHandler.class);
         registerOperationHandler(LdbcShortQuery4MessageContent.class, LdbcShortQuery4MessageContentHandler.class);
@@ -645,21 +647,20 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. shortestPath()
-            // 2. OPTIONAL MATCH
             String stmt = "MATCH (person1:Person {'id': ?}), (person2:Person {'id': ?}) " +
-                    "OPTIONAL MATCH path = shortestPath((person1)-[:knows*..15]-(person2)) " +
+                    "WITH shortestpath_vertex_ids(person1, person2) as vertex_ids " +
                     "RETURN " +
-                    "CASE path IS NULL " +
+                    "CASE vertex_ids IS NULL " +
                     "  WHEN true THEN -1 " +
-                    "  ELSE length(path) " +
+                    "  ELSE array_length(vertex_ids, 1) - 1 " +
                     "END AS pathLength";
+            System.out.println("Query 13 : " + ldbcQuery13.person1Id() + ", " +ldbcQuery13.person2Id());
             ResultSet rs = client.executeQuery(stmt, ldbcQuery13.person1Id(), ldbcQuery13.person2Id());
 
             LdbcQuery13Result result = null;
             try {
-                result = new LdbcQuery13Result(rs.getInt(1));
+                if (rs.next())
+                    result = new LdbcQuery13Result(rs.getInt(1));
             } catch (SQLException e) {
                 throw new AGClientException(e);
             }
@@ -676,15 +677,12 @@ public class AGDb extends Db {
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
-
-            // FIXME: 16. 10. 14
-            // 1. allShortestPaths
-            String stmt = "MATCH path = allShortestPaths((person1:Person {'id': ?})-[:knows*..15]-(person2:Person {'id': ?})) " +
-                    "WITH nodes(path) AS pathNodes " +
-                    "RETURN " +
-                    "  extract_ids(n IN pathNodes | n.id) AS pathNodeIds, " +
-                    "  calc_weight(pathNodes) AS weight " +
+            String stmt = "SELECT " +
+                    "  extract_ids(vertex_ids) AS pathNodeIds, " +
+                    "  calc_weight(vertex_ids) AS weight " +
+                    "FROM allshortestpath_vertex_ids(?, ?) " +
                     "ORDER BY weight DESC";
+            System.out.println("Query 14 : " + ldbcQuery14.person1Id() + ", " +ldbcQuery14.person2Id());
             ResultSet rs = client.executeQuery(stmt, ldbcQuery14.person1Id(), ldbcQuery14.person2Id());
 
             List<LdbcQuery14Result> resultList = new ArrayList<>();
@@ -696,6 +694,8 @@ public class AGDb extends Db {
             } catch (SQLException e) {
                 throw new AGClientException(e);
             }
+
+            resultReporter.report(0, resultList, ldbcQuery14);
         }
     }
 

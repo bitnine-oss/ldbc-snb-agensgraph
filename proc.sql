@@ -105,6 +105,13 @@ BEGIN
         path graphid[] 
     ) ON COMMIT DROP;
 
+	CREATE OR REPLACE VIEW knows_union AS
+	SELECT start, "end"
+	FROM ldbc.knows
+	UNION ALL
+	SELECT "end", start
+	FROM ldbc.knows;
+
     INSERT INTO inter_result1 VALUES (startnode, ARRAY[startnode]);
     iter := 0;
 
@@ -113,12 +120,12 @@ BEGIN
         IF iter % 2 = 0 THEN
             INSERT INTO inter_result2 
                 SELECT distinct e."end", i.path || e."end"
-                FROM ldbc.knows AS e, inter_result1 AS i
+                FROM knows_union AS e, inter_result1 AS i
                 WHERE nid = e.start AND e."end" = endnode;
         ELSE
             INSERT INTO inter_result1 
                 SELECT distinct e."end", i.path || e."end"
-                FROM ldbc.knows AS e, inter_result2 AS i
+                FROM knows_union AS e, inter_result2 AS i
                 WHERE nid = e.start AND e."end" = endnode;
         END IF; 
 
@@ -128,12 +135,12 @@ BEGIN
         IF iter % 2 = 0 THEN
             INSERT INTO inter_result2 
                 SELECT distinct e."end", i.path || e."end"
-                FROM ldbc.knows AS e, inter_result1 AS i
+                FROM knows_union AS e, inter_result1 AS i
 				WHERE nid = e.start AND NOT (i.path @> array[e."end"]);
         ELSE
             INSERT INTO inter_result1
                 SELECT distinct e."end", i.path || e."end"
-                FROM ldbc.knows AS e, inter_result2 AS i
+                FROM knows_union AS e, inter_result2 AS i
                 WHERE nid = e.start AND NOT (i.path @> array[e."end"]);
         END IF;
 

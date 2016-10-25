@@ -1,7 +1,7 @@
 \timing on
 
 -- Set the source path
-\set source_path '/data_ext4/social_network'
+\set source_path '/home/ktlee/tools/ldbc_snb_datagen/social_network'
 
 drop graph ldbc cascade;
 create graph ldbc;
@@ -129,7 +129,7 @@ create foreign table fdwForum
 	(
 		id int8, 
 		title varchar(256), 
-		creationDate TIMESTAMP WITH TIME ZONE
+		creationDate int8
 	)
 	server graph_import
 	options 
@@ -154,7 +154,7 @@ create foreign table fdwPost
 	(
 		id int8, 
 		imageFile varchar(80),
-		creationDate TIMESTAMP WITH TIME ZONE,
+		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80),
 		lanaguage varchar(80),
@@ -181,7 +181,7 @@ drop foreign table fdwComment;
 create foreign table fdwComment 
 	(
 		id int8, 
-		creationDate TIMESTAMP WITH TIME ZONE,
+		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80),
 		content varchar(2000),
@@ -234,8 +234,8 @@ create foreign table fdwPerson
 		firstName varchar(80),
 		lastName varchar(80),
 		gender varchar(6),
-		birthday date,
-		creationDate TIMESTAMP WITH TIME ZONE,
+		birthday int8,
+		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80)
 	)
@@ -452,7 +452,7 @@ create foreign table fdwHasMember
 	(
 		forumId int8, 
 		personId int8,
-		joinDate TIMESTAMP WITH TIME ZONE 
+		joinDate int8
 	)
 	server graph_import
 	options 
@@ -716,7 +716,7 @@ create foreign table fdwKnows
 	(
 		person1Id int8, 
 		person2Id int8,
-		creationDate TIMESTAMP WITH TIME ZONE
+		creationDate int8
 	)
 	server graph_import
 	options 
@@ -741,7 +741,7 @@ create foreign table fdwLikesPost
 	(
 		personId int8, 
 		postId int8,
-		creationDate TIMESTAMP WITH TIME ZONE
+		creationDate int8
 	)
 	server graph_import
 	options 
@@ -766,7 +766,7 @@ create foreign table fdwLikesComment
 	(
 		personId int8, 
 		commentId int8,
-		creationDate TIMESTAMP WITH TIME ZONE
+		creationDate int8
 	)
 	server graph_import
 	options 

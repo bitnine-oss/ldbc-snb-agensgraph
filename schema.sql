@@ -492,6 +492,30 @@ match (r:Forum), (s:Person)
 where (r).id::int8 = (row).forumId and (s).id::int8 = (row).personId
 create (r)-[:hasModerator]->(s);
 
+--- hasTag (post)
+\set file_name :source_path/post_hasTag_tag_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwPosttHasTag;
+create foreign table fdwPostHasTag
+	(
+		postId int8, 
+		tagId int8
+	)
+	server graph_import
+	options 
+	(
+		 FORMAT 'csv',
+		 HEADER 'true',
+		 DELIMITER '|',
+		 NULL '',
+		 FILENAME :'file_name'
+	);
+load from fdwPostHasTag as row
+match (r:Post), (s:Tag)
+where (r).id::int8 = (row).postId and (s).id::int8 = (row).tagId
+create (r)-[:hasTag]->(s);
+
 --- hasTag (comment)
 \set file_name :source_path/comment_hasTag_tag_0_0.csv
 \echo Start Loading :file_name

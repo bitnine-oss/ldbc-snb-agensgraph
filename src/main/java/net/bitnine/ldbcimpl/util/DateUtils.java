@@ -7,6 +7,6 @@ import java.util.Date;
  */
 public class DateUtils {
     public static Date endDate(Date startDate, int days) {
-        return new Date(startDate.getTime() + (long)days * 24 * 60 * 60 * 100);
+        return new Date(startDate.getTime() + (long)days * 24L * 60L * 60L * 1000L);
     }
 }

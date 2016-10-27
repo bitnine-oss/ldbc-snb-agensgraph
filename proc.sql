@@ -96,20 +96,20 @@ BEGIN
     CREATE TEMP TABLE inter_result1
     (   
         nid graphid,
-        path graphid[] 
+        path graphid[]
     ) ON COMMIT DROP;
 
     CREATE TEMP TABLE inter_result2 
     (   
         nid graphid,
-        path graphid[] 
+        path graphid[]
     ) ON COMMIT DROP;
 
 	CREATE OR REPLACE VIEW knows_union AS
-	SELECT start, "end"
+	SELECT id, start, "end"
 	FROM ldbc.knows
 	UNION ALL
-	SELECT "end", start
+	SELECT id, "end", start
 	FROM ldbc.knows;
 
     INSERT INTO inter_result1 VALUES (startnode, ARRAY[startnode]);
@@ -141,7 +141,7 @@ BEGIN
             INSERT INTO inter_result1
                 SELECT distinct e."end", i.path || e."end"
                 FROM knows_union AS e, inter_result2 AS i
-                WHERE nid = e.start AND NOT (i.path @> array[e."end"]);
+				WHERE nid = e.start AND NOT (i.path @> array[e."end"]);
         END IF;
 
         GET DIAGNOSTICS rowcount = ROW_COUNT;

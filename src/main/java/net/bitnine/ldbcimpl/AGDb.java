@@ -69,15 +69,20 @@ public class AGDb extends Db {
                           LoggingService loggingService) throws DbException {
         connectionState = new AGDbConnectionState(properties);
         registerOperationHandler(LdbcQuery2.class, LdbcQuery2Handler.class);
+        registerOperationHandler(LdbcQuery3.class, LdbcQuery3Handler.class);
         registerOperationHandler(LdbcQuery6.class, LdbcQuery6Handler.class);
         registerOperationHandler(LdbcQuery7.class, LdbcQuery7Handler.class);
         registerOperationHandler(LdbcQuery8.class, LdbcQuery8Handler.class);
+        registerOperationHandler(LdbcQuery9.class, LdbcQuery9Handler.class);
+        registerOperationHandler(LdbcQuery11.class, LdbcQuery11Handler.class);
         registerOperationHandler(LdbcQuery13.class, LdbcQuery13Handler.class);
         registerOperationHandler(LdbcQuery14.class, LdbcQuery14Handler.class);
         registerOperationHandler(LdbcShortQuery1PersonProfile.class, LdbcShortQuery1PersonProfileHandler.class);
+        registerOperationHandler(LdbcShortQuery2PersonPosts.class, LdbcShortQuery2PersonPostsHandler.class);
         registerOperationHandler(LdbcShortQuery3PersonFriends.class, LdbcShortQuery3PersonFriendsHandler.class);
         registerOperationHandler(LdbcShortQuery4MessageContent.class, LdbcShortQuery4MessageContentHandler.class);
         registerOperationHandler(LdbcShortQuery5MessageCreator.class, LdbcShortQuery5MessageCreatorHandler.class);
+        registerOperationHandler(LdbcShortQuery6MessageForum.class, LdbcShortQuery6MessageForumHandler.class);
         registerOperationHandler(LdbcUpdate2AddPostLike.class, LdbcUpdate2AddPostLikeHandler.class);
         registerOperationHandler(LdbcUpdate3AddCommentLike.class, LdbcUpdate3AddCommentLikeHandler.class);
         registerOperationHandler(LdbcUpdate5AddForumMembership.class, LdbcUpdate5AddForumMembershipHandler.class);
@@ -100,24 +105,24 @@ public class AGDb extends Db {
                     "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
                     "LIMIT ? " +
                     "MATCH (friend)-[:isLocatedIn]->(friendCity:Place) " +
-                    "OPTIONAL MATCH (friend)-[studyAt:studyAt]->(uni:Organisation)-[:isLocatedIn]->(uniCity:Place) " +
+                    "OPTIONAL MATCH (friend)-[studyAt:studyAt]->(uni:Organization)-[:isLocatedIn]->(uniCity:Place) " +
                     "WITH " +
                     "  friend, " +
                     "  jsonb_agg( " +
                     "    CASE uni.name " +
                     "      WHEN null THEN null " +
-                    "      ELSE array_to_json(array[uni.name, studyAt.classYear, uniCity.name])::jsonb " +
+                    "      ELSE array_to_json(array[uni.name, studyAt.\"classYear\", uniCity.name])::jsonb " +
                     "    END " +
                     "  ) AS unis, " +
                     "  friendCity, " +
                     "  distance " +
-                    "OPTIONAL MATCH (friend)-[worksAt:workAt]->(company:Organisation)-[:isLocatedIn]->(companyCountry:Place) " +
+                    "OPTIONAL MATCH (friend)-[worksAt:workAt]->(company:Organization)-[:isLocatedIn]->(companyCountry:Place) " +
                     "WITH " +
                     "  friend, " +
                     "  jsonb_agg( " +
                     "    CASE company.name " +
                     "      WHEN null THEN null " +
-                    "      ELSE array_to_json(array[company.name, worksAt.workFrom, companyCountry.name])::jsonb " +
+                    "      ELSE array_to_json(array[company.name, worksAt.\"workFrom\", companyCountry.name])::jsonb " +
                     "    END " +
                     "  ) AS companies, " +
                     "  unis, " +
@@ -208,23 +213,21 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. VLR
-            // 2. not(path) - q3_not procedure
-            String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(messageX), " +
-                    "(messageX)-[:isLocatedIn]->(countryX:Place) " +
+            String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(messageX:Message), " +
+                    "(messageX:Message)-[:isLocatedIn]->(countryX:Place) " +
                     "WHERE " +
                     "  person.id != friend.id " +
                     "  AND not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryX)) " +
-                    "  AND countryX.name = ? AND messageX.creationDate >= ? " +
-                    "  AND messageX.creationDate < ? " +
+                    "  AND countryX.name = ? " +
+                    "  AND messageX.creationDate::int8 >= ? " +
+                    "  AND messageX.creationDate::int8 < ? " +
                     "WITH friend, count(DISTINCT messageX) AS xCount " +
                     "MATCH (friend)<-[:hasCreator]-(messageY)-[:isLocatedIn]->(countryY:Place) " +
                     "WHERE " +
                     "  countryY.name= ? " +
                     "  AND not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryY)) " +
-                    "  AND messageY.creationDate >= ? " +
-                    "  AND messageY.creationDate < ? " +
+                    "  AND messageY.creationDate::int8 >= ? " +
+                    "  AND messageY.creationDate::int8 < ? " +
                     "WITH " +
                     "  friend.id AS friendId, " +
                     "  friend.firstName AS friendFirstName, " +
@@ -242,7 +245,8 @@ public class AGDb extends Db {
                     "LIMIT ?";
             java.util.Date endDate = DateUtils.endDate(ldbcQuery3.startDate(), ldbcQuery3.durationDays());
             ResultSet rs = client.executeQuery(stmt, ldbcQuery3.personId(), ldbcQuery3.countryXName(),
-                    ldbcQuery3.startDate(), endDate, ldbcQuery3.startDate(), endDate, ldbcQuery3.limit());
+                    ldbcQuery3.startDate(), endDate, ldbcQuery3.countryYName(), ldbcQuery3.startDate(), endDate,
+                    ldbcQuery3.limit());
             List<LdbcQuery3Result> resultList = new ArrayList<>();
             try {
                 while (rs.next()) {
@@ -266,7 +270,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             // FIXME: 16. 10. 14
-            // 1. VLR
+            // 1. OPTIONAL MATCH
             String stmt = "MATCH (person:Person {'id': ?})-[:knows]-(:Person)<-[:hasCreator]-(post:Post)-[:hasTag]->(tag:Tag) " +
                     "WHERE post.creationDate >= ? AND post.creationDate < ? " +
                     "OPTIONAL MATCH (tag)<-[:hasTag]-(oldPost:Post)-[:hasCreator]->(:Person)-[:knows]-(person) " +
@@ -304,8 +308,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             // FIXME: 16. 10. 14
-            // 1. VLR
-            // 2. OPTIONAL MATCH
+            // 1. OPTIONAL MATCH
             String stmt = "MATCH (person:Person {'id': ?)-[:knows*1..2]-(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
                     "WHERE membership.joinDate > ? AND person.id != friend.id " +
                     "WITH DISTINCT friend, forum " +
@@ -341,18 +344,15 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. VLR
-            // 2. column reference; match (var:LABEL)... , (var)
-            String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person), " +
-                    "  (friend)<-[:hasCreator]-(friendPost:Post)-[:hasTag]->(knownTag:Tag {'name': ?}) " +
+            String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person) " +
+                    ", (friend:Person)<-[:hasCreator]-(friendPost:Post)-[:hasTag]->(knownTag:Tag {'name': ?}) " +
                     "WITH person, friend, friendPost, knownTag " +
                     "WHERE person.id != friend.id " +
                     "MATCH (friendPost)-[:hasTag]->(commonTag:Tag) " +
                     "WHERE commonTag.id != knownTag.id " +
                     "WITH DISTINCT commonTag, knownTag, friend " +
                     "MATCH (commonTag)<-[:hasTag]-(commonPost:Post)-[:hasTag]->(knownTag) " +
-                    ", (commonPost)-[:hasCreator]->(friend) " +
+                    "WHERE exists((commonPost)-[:hasCreator]->(friend)) " +
                     "RETURN " +
                     "  commonTag.name AS tagName, " +
                     "  count(commonPost) AS postCount " +
@@ -402,7 +402,6 @@ public class AGDb extends Db {
                     "  not exists((liker)-[:knows]->(person))" +
                     "ORDER BY likeTime DESC, personId ASC " +
                     "LIMIT ?";
-
             ResultSet rs = client.executeQuery(stmt, ldbcQuery7.personId(), ldbcQuery7.limit());
 
             List<LdbcQuery7Result> resultList = new ArrayList<>();
@@ -463,10 +462,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. VLR
             String stmt = "MATCH (:Person {'id': ?})-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(message) " +
-                    "WHERE message.creationDate < ? " +
+                    "WHERE message.creationDate::int8 < ? " +
                     "RETURN DISTINCT " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +
@@ -562,19 +559,17 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. VLR
             String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person) " +
                     "WHERE person.id != friend.id " +
                     "WITH DISTINCT friend " +
-                    "MATCH (friend)-[worksAt:workAt]->(company:Organisation)-[:isLocatedIn]->(:Place {'name': ?}) " +
-                    "WHERE worksAt.workFrom::int8 < ? " +
+                    "MATCH (friend)-[worksAt:workAt]->(company:Organization)-[:isLocatedIn]->(:Place {'name': ?}) " +
+                    "WHERE worksAt.\"workFrom\"::int < ? " +
                     "RETURN " +
                     "  friend.id::int8 AS friendId, " +
                     "  friend.firstName AS friendFirstName, " +
                     "  friend.lastName AS friendLastName, " +
                     "  company.name AS companyName, " +
-                    "  worksAt.workFrom::int8 AS workFromYear " +
+                    "  worksAt.\"workFrom\"::int AS workFromYear " +
                     "ORDER BY workFromYear ASC, friendId ASC, companyName DESC " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery11.personId(), ldbcQuery11.countryName(),
@@ -604,13 +599,12 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             // FIXME: 16. 10. 16
-            // 1. VLR
-            // 2. left pattern column reference
-            // 3. OPTIONAL MATCH
+            // 1. left pattern column reference
+            // 2. OPTIONAL MATCH
             String stmt = "MATCH (:Person {'id': ?})-[:knows]-(friend:Person) " +
                     "OPTIONAL MATCH " +
                     "  (friend)<-[:hasCreator]-(c:\"Comment\")-[:replyOf]->(:Post)-[:hasTag]->(tag:Tag), " +
-                    "  (tag)-[:hasType]->(tagClass:TagClass)-[:isSubclassOf*0..]->(baseTagClass:TagClass) " +
+                    "  (tag:Tag)-[:hasType]->(tagClass:TagClass)-[:isSubclassOf*0..]->(baseTagClass:TagClass) " +
                     "WHERE tagClass.name = ? OR baseTagClass.name = ? " +
                     "RETURN " +
                     "  friend.id::int8 AS friendId, " +
@@ -654,6 +648,9 @@ public class AGDb extends Db {
                     "  WHEN true THEN -1 " +
                     "  ELSE array_length(vertex_ids, 1) - 1 " +
                     "END AS pathLength";
+            System.out.println("Complex Query 13");
+            System.out.println("|- Param #1: " + ldbcQuery13.person1Id());
+            System.out.println("`- Param #2: " + ldbcQuery13.person2Id());
             ResultSet rs = client.executeQuery(stmt, ldbcQuery13.person1Id(), ldbcQuery13.person2Id());
 
             LdbcQuery13Result result = null;
@@ -745,9 +742,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. VLR
-            String stmt = "MATCH (:Person {'id':{id}})<-[:hasCreator]-(m)-[:replyOf*0..]->(p:Post) " +
+            String stmt = "MATCH (:Person {'id': ?})<-[:hasCreator]-(m:Message)-[:replyOf*0..]->(p:Post) " +
                     "MATCH (p)-[:hasCreator]->(c) " +
                     "RETURN " +
                     "  m.id::int8 as messageId, " +
@@ -762,6 +757,9 @@ public class AGDb extends Db {
                     "  c.lastName as originalPostAuthorLastName " +
                     "ORDER BY messageCreationDate DESC " +
                     "LIMIT ?";
+            System.out.println("Short Query 2");
+            System.out.println("|- Param #1: " + ldbcShortQuery2PersonPosts.personId());
+            System.out.println("`- Param #2: " + ldbcShortQuery2PersonPosts.limit());
             ResultSet rs = client.executeQuery(stmt,
                     ldbcShortQuery2PersonPosts.personId(),
                     ldbcShortQuery2PersonPosts.limit());
@@ -890,8 +888,6 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            // FIXME: 16. 10. 14
-            // 1. VLR
             String stmt = "MATCH (m:Message {'id': ?})-[:replyOf*0..]->(p:Post)<-[:containerOf]-(f:Forum)-[:hasModerator]->(mod:Person) " +
                     "RETURN " +
                     "  f.id::int8 AS forumId, " +
@@ -984,6 +980,8 @@ public class AGDb extends Db {
             Jsonb value = new Jsonb(prop);
             client.execute(stmt, value);
 
+            // FIXME: 16. 10. 25
+            // 1. OPTIONAL MATCH
             stmt = "MATCH (p:Person {'id': ?}), (c:Place {'id': ?})" +
                     "OPTIONAL MATCH (t:Tag) " +
                     "WHERE ? @> array[t.id::int8] " +

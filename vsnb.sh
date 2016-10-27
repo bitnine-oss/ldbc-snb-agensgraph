@@ -2,7 +2,7 @@
 
 java -cp \
 target/classes/jeeves-0.3-SNAPSHOT.jar\
-:target/classes/agensgraph-jdbc-0.1.0-SNAPSHOT.jar:\
+:target/classes/agensgraph-jdbc-0.1.0-SNAPSHOT.jar\
 :target/classes \
 com.ldbc.driver.Client \
 -P ag-ldbc_driver-snb-validation_parameter_creation.properties \

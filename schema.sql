@@ -496,7 +496,7 @@ create (r)-[:hasModerator]->(s);
 \set file_name :source_path/post_hasTag_tag_0_0.csv
 \echo Start Loading :file_name
 
-drop foreign table fdwPosttHasTag;
+drop foreign table fdwPostHasTag;
 create foreign table fdwPostHasTag
 	(
 		postId int8, 
@@ -905,47 +905,47 @@ where (r).id::int8 = (row).personId and (s).id::int8 = (row).organId
 create (r)-[:workAt {'workFrom': (row).workFrom}]->(s);
 
 -- create index
---create index on ldbc.containerOf (start, "end");
---create index on ldbc.hasCreator (start, "end");
---create index on ldbc.hasInterest (start, "end");
---create index on ldbc.hasMember (start, "end");
---create index on ldbc.hasModerator (start, "end");
---create index on ldbc.hasTag (start, "end");
---create index on ldbc.hasType (start, "end");
---create index on ldbc.isLocatedIn (start, "end");
---create index on ldbc.isPartOf (start, "end");
---create index on ldbc.isSubclassOf (start, "end");
---create index on ldbc.knows (start, "end");
---create index on ldbc.likes (start, "end");
---create index on ldbc.replyOf (start, "end");
---create index on ldbc.studyAt (start, "end");
---create index on ldbc.workAt (start, "end");
---
---create index on ldbc.containerOf ("end", start);
---create index on ldbc.hasCreator ("end", start);
---create index on ldbc.hasInterest ("end", start);
---create index on ldbc.hasMember ("end", start);
---create index on ldbc.hasModerator ("end", start);
---create index on ldbc.hasTag ("end", start);
---create index on ldbc.hasType ("end", start);
---create index on ldbc.isLocatedIn ("end", start);
---create index on ldbc.isPartOf ("end", start);
---create index on ldbc.isSubclassOf ("end", start);
---create index on ldbc.knows ("end", start);
---create index on ldbc.likes ("end", start);
---create index on ldbc.replyOf ("end", start);
---create index on ldbc.studyAt ("end", start);
---create index on ldbc.workAt ("end", start);
---
---create unique index on ldbc.Forum (id);
---create unique index on ldbc.Message (id);
---create unique index on ldbc.Post (id);
---create unique index on ldbc."Comment" (id);
---create unique index on ldbc.Organization (id);
---create unique index on ldbc.Person (id);
---create unique index on ldbc.Place (id);
---create unique index on ldbc.Tag (id);
---create unique index on ldbc.TagClass (id);
+---create index on ldbc.containerOf (start, "end", id);
+---create index on ldbc.hasCreator (start, "end", id);
+---create index on ldbc.hasInterest (start, "end", id);
+---create index on ldbc.hasMember (start, "end", id);
+---create index on ldbc.hasModerator (start, "end", id);
+---create index on ldbc.hasTag (start, "end", id);
+---create index on ldbc.hasType (start, "end", id);
+---create index on ldbc.isLocatedIn (start, "end", id);
+---create index on ldbc.isPartOf (start, "end", id);
+---create index on ldbc.isSubclassOf (start, "end", id);
+---create index on ldbc.knows (start, "end", id);
+---create index on ldbc.likes (start, "end", id);
+---create index on ldbc.replyOf (start, "end", id);
+---create index on ldbc.studyAt (start, "end", id);
+---create index on ldbc.workAt (start, "end", id);
+---
+---create index on ldbc.containerOf ("end", start, id);
+---create index on ldbc.hasCreator ("end", start, id);
+---create index on ldbc.hasInterest ("end", start, id);
+---create index on ldbc.hasMember ("end", start, id);
+---create index on ldbc.hasModerator ("end", start, id);
+---create index on ldbc.hasTag ("end", start, id);
+---create index on ldbc.hasType ("end", start, id);
+---create index on ldbc.isLocatedIn ("end", start, id);
+---create index on ldbc.isPartOf ("end", start, id);
+---create index on ldbc.isSubclassOf ("end", start, id);
+---create index on ldbc.knows ("end", start, id);
+---create index on ldbc.likes ("end", start, id);
+---create index on ldbc.replyOf ("end", start, id);
+---create index on ldbc.studyAt ("end", start, id);
+---create index on ldbc.workAt ("end", start, id);
+---
+---create unique index on ldbc.Forum (id);
+---create unique index on ldbc.Message (id);
+---create unique index on ldbc.Post (id);
+---create unique index on ldbc."Comment" (id);
+---create unique index on ldbc.Organization (id);
+---create unique index on ldbc.Person (id);
+---create unique index on ldbc.Place (id);
+---create unique index on ldbc.Tag (id);
+---create unique index on ldbc.TagClass (id);
 
 -- Analyze edges 
 analyze ldbc.containerOf;

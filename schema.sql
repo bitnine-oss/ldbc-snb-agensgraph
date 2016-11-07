@@ -14,6 +14,8 @@ create vlabel Post inherits (Message);
 create vlabel "Comment" inherits (Message);
 create vlabel Organization;
 create vlabel Person;
+create vlabel Email;
+create vlabel Language;
 create vlabel Place;
 create vlabel Tag;
 create vlabel TagClass;
@@ -42,6 +44,8 @@ create elabel workAt;
 --alter table ldbc."Comment" set unlogged;
 --alter table ldbc.Organization set unlogged;
 --alter table ldbc.Person set unlogged;
+--alter table ldbc.Email set unlogged;
+--alter table ldbc.Language set unlogged;
 --alter table ldbc.Place set unlogged;
 --alter table ldbc.Tag set unlogged;
 --alter table ldbc.TagClass set unlogged;
@@ -68,6 +72,8 @@ create elabel workAt;
 --alter table ldbc."Comment" drop constraint "Comment"_pkey;
 --alter table ldbc.Organization drop constraint Organization_pkey;
 --alter table ldbc.Person drop constraint Person_pkey;
+--alter table ldbc.Email drop constraint Email_pkey;
+--alter table ldbc.Language drop constraint Language_pkey;
 --alter table ldbc.Place drop constraint Place_pkey;
 --alter table ldbc.Tag drop constraint Tag_pkey;
 --alter table ldbc.TagClass drop constraint TagClass_pkey;
@@ -250,6 +256,68 @@ create foreign table fdwPerson
 	);
 load from fdwPerson as row
 create (:Person =row_to_json(row)::jsonb);
+
+-- Person's email
+\set file_name :source_path/person_email_emailaddress_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwEmail;
+create foreign table fdwEmail 
+	(
+		id int8, 
+		email varchar(200)
+	)
+	server graph_import
+	options 
+	(
+		 FORMAT 'csv',
+		 HEADER 'true',
+		 DELIMITER '|',
+		 NULL '',
+		 FILENAME :'file_name'
+	);
+
+drop table emailagg;
+create table emailagg as
+select id, jsonb_agg(email) as emails from fdwEmail group by id;
+
+load from emailagg as row
+create (:Email =row_to_json(row)::jsonb);
+
+MATCH (e:Email), (p:Person)
+WHERE e.id = p.id
+SET p.email = e.emails::jsonb;
+
+-- Person's language
+\set file_name :source_path/person_speaks_language_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwLanguage;
+create foreign table fdwLanguage 
+	(
+		id int8, 
+		language varchar(200)
+	)
+	server graph_import
+	options 
+	(
+		 FORMAT 'csv',
+		 HEADER 'true',
+		 DELIMITER '|',
+		 NULL '',
+		 FILENAME :'file_name'
+	);
+
+drop table languageagg;
+create table languageagg as
+select id, jsonb_agg(language) as speaks from fdwLanguage group by id;
+
+load from languageagg as row
+create (:Language =row_to_json(row)::jsonb);
+
+MATCH (l:Language), (p:Person)
+WHERE l.id = p.id
+SET p.speaks = l.speaks::jsonb;
 
 -- Place
 \set file_name :source_path/place_0_0.csv

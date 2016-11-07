@@ -11,22 +11,33 @@ import java.util.List;
  */
 public class JsonArrayUtils {
     public static List<String> toStringList(JsonArray arr) {
-        if (arr == null || arr.getJsonType() != JsonType.ARRAY)
-            return null;
         List<String> l = new ArrayList<>();
-        int size = arr.getJsonArray().size();
-        for (int i = 0; i < size; ++i) {
-            l.add(arr.getString(i));
+        for (int i = 0; i < arr.size(); ++i) {
+            if (! arr.isNull(i))
+                l.add(arr.getString(i));
         }
         return l;
     }
+
+    public static List<List<Object>> toListofList(JsonArray arr) {
+        List<List<Object>> ll = new ArrayList<>();
+        for (int i = 0; i < arr.size(); ++i) {
+            if (arr.isNull(i))
+                continue;
+            JsonArray prop = arr.getArray(i);
+            List<Object> l = new ArrayList<>(3);
+            l.add(prop.getString(0));
+            l.add(Long.parseLong(prop.getString(1)));
+            l.add(prop.getString(2));
+            ll.add(l);
+        }
+        return ll;
+    }
     public static List<Long> toLongList(JsonArray arr) {
-        if (arr == null || arr.getJsonType() != JsonType.ARRAY)
-            return null;
         List<Long> l = new ArrayList<>();
-        int size = arr.getJsonArray().size();
-        for (int i = 0; i < size; ++i) {
-            l.add(arr.getLong(i));
+        for (int i = 0; i < arr.size(); ++i) {
+            if (! arr.isNull(i))
+                l.add(arr.getLong(i));
         }
         return l;
     }

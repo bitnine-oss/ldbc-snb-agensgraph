@@ -1,24 +1,25 @@
 -- used in complex query 10
-create or replace function c10_fc(posts vertex[])
+create or replace function c10_fc(posts vertex[], person_id int8)
 returns vertex[] as $$
 declare
 	arr vertex[];
 	has_interest_tag boolean;
-	p vertex;
+	post vertex;
 begin
 	if posts is null
 	then
 		return arr;
 	end if;
 
-	foreach p in array posts
+	foreach post in array posts
 	loop
-		execute 'match (:Post {''id'': $1})-[:hasTag]->(:Tag)<-[:hasInterest]-(:Person) '
+		execute 'match (post:Post)-[:hasTag]->(:Tag)<-[:hasInterest]-(p:Person) '
+			|| 'where post.id::int8 = $1 and p.id::int8 = $2'
 			|| 'return count(p) > 0'
-			into has_interest_tag using p.id::int8;
+			into has_interest_tag using (properties(post)).id::int8, person_id;
 		if has_interest_tag
 		then
-			arr := array_append(arr, p);
+			arr := array_append(arr, post);
 		end if;
 	end loop;
 
@@ -41,21 +42,24 @@ begin
 	for i in 1..array_length(node_ids, 1) - 1 loop
 		prev := node_ids[i];
 		curr := node_ids[i+1];
-		execute 'match p=(:Person {''id'': $1})<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(:Person {''id'': $2}) '
+		execute 'match p=(p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
+			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
 			|| 'return length(p)'
 			into p1 using curr, prev;
 		GET DIAGNOSTICS rowcount := ROW_COUNT;
 		if rowcount = 0 then
 			p1 := 0;
 		end if;
-		execute 'match p=(:Person {''id'': $1})<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(:Person {''id'': $2}) '
+		execute 'match p=(p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
+			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
 			|| 'return length(p)'
 			into p2 using prev, curr;
 		GET DIAGNOSTICS rowcount := ROW_COUNT;
 		if rowcount = 0 then
 			p2 := 0;
 		end if;
-		execute 'match p=(:Person {''id'': $1})-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]-(:Person {''id'': $2}) '
+		execute 'match p=(p1:Person)-[:hasCreator]-(:"Comment")-[:replyOf]-(:"Comment")-[:hasCreator]-(p2:Person) '
+			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
 			|| 'return length(p)'
 			into p3 using prev, curr;
 		GET DIAGNOSTICS rowcount := ROW_COUNT;
@@ -211,7 +215,8 @@ begin
 		return next;
 		return;
 	end if;
-	execute 'match (p1:Person {''id'': $1}), (p2:Person {''id'': $2}) return id(p1), id(p2)'
+	execute 'match (p1:Person), (p2:Person) '
+		||  'where p1.id::int8 = $1 and p2.id::int8 = $2 return id(p1), id(p2)'
 		into p1, p2 using p1_id, p2_id;
 	for graphids in select paths from knows_shortestpaths(p1, p2)
 	loop

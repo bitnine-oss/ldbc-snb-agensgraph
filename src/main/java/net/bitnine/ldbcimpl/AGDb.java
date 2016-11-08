@@ -188,7 +188,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (:Person {'id': ?})-[:knows]-(friend:Person)<-[:hasCreator]-(message) " +
+            String stmt = "MATCH (:Person {'id': ?})-[:knows]-(friend:Person)<-[:hasCreator]-(message:Message) " +
                     "WHERE message.creationDate::int8 <= ? " +
                     "RETURN " +
                     "  friend.id::int8 AS personId, " +
@@ -390,7 +390,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery7 ldbcQuery7, DbConnectionState dbConnectionState, ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person {'id': ?})<-[:hasCreator]-(message)<-[l:likes]-(liker:Person) " +
+            String stmt = "MATCH (person:Person {'id': ?})<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
                     "WITH liker, message, l.\"creationDate\"::int8 AS likeTime, person " +
                     "ORDER BY likeTime DESC, message.id::int8 ASC " +
                     "WITH " +
@@ -471,7 +471,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (:Person {'id': ?})-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(message) " +
+            String stmt = "MATCH (:Person {'id': ?})-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(message:Message) " +
                     "WHERE message.creationDate::int8 < ? " +
                     "RETURN DISTINCT " +
                     "  friend.id::int8 AS personId, " +
@@ -972,8 +972,8 @@ public class AGDb extends Db {
             prop.put("firstname", ldbcUpdate1AddPerson.personFirstName());
             prop.put("lastname", ldbcUpdate1AddPerson.personLastName());
             prop.put("gender", ldbcUpdate1AddPerson.gender());
-            prop.put("birthday", ldbcUpdate1AddPerson.birthday().toString());
-            prop.put("creationdate", ldbcUpdate1AddPerson.creationDate().toString());
+            prop.put("birthday", ldbcUpdate1AddPerson.birthday().getTime());
+            prop.put("creationdate", ldbcUpdate1AddPerson.creationDate().getTime());
             prop.put("locationip", ldbcUpdate1AddPerson.locationIp());
             prop.put("browserused", ldbcUpdate1AddPerson.browserUsed());
             prop.put("speaks", JsonArray.create(ldbcUpdate1AddPerson.languages()));
@@ -1010,7 +1010,7 @@ public class AGDb extends Db {
                         createBldr.append(", ");
                     }
                     matchBldr.append(
-                            String.format("(u%d:Organisation {id: ?})", i));
+                            String.format("(u%d:Organization {id: ?})", i));
                     createBldr.append(
                             String.format("(p)-[:studyAt {'classYear': ?}]->(u%d)", i));
                     argList.add(org.organizationId());
@@ -1020,7 +1020,7 @@ public class AGDb extends Db {
                 stmt = matchBldr.toString() + " " + createBldr.toString();
                 Object[] args = new Object[argList.size()];
                 argList.toArray(args);
-                client.execute(stmt, argList);
+                client.execute(stmt, args);
             }
 
             if (ldbcUpdate1AddPerson.workAt().size() > 0) {
@@ -1039,7 +1039,7 @@ public class AGDb extends Db {
                         createBldr.append(", ");
                     }
                     matchBldr.append(
-                            String.format("(c%d:Organisation {id: ?})", i));
+                            String.format("(c%d:Organization {id: ?})", i));
                     createBldr.append(
                             String.format("(p)-[:workAt {'workFrom': ?}]->(c%d)", i));
                     LdbcUpdate1AddPerson.Organization org = ldbcUpdate1AddPerson.workAt().get(i);

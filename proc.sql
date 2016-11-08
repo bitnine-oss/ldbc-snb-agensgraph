@@ -1,14 +1,15 @@
 -- used in complex query 10
+drop function c10_fc(posts vertex[], person_id int8);
 create or replace function c10_fc(posts vertex[], person_id int8)
-returns vertex[] as $$
+returns int8 as $$
 declare
-	arr vertex[];
+	cnt int8 := 0;
 	has_interest_tag boolean;
 	post vertex;
 begin
 	if posts is null
 	then
-		return arr;
+		return 0;
 	end if;
 
 	foreach post in array posts
@@ -19,11 +20,11 @@ begin
 			into has_interest_tag using (properties(post)).id::int8, person_id;
 		if has_interest_tag
 		then
-			arr := array_append(arr, post);
+			cnt := cnt + 1;
 		end if;
 	end loop;
 
-	return arr;
+	return cnt;
 end
 $$ language plpgsql;
 

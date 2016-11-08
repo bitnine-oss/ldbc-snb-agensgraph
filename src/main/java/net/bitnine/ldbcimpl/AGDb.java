@@ -511,7 +511,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person {'id': ?})-[:knows]-()-[:knows]-(friend:Person)-[:isLocatedIn]->(city:Place) " +
+            String stmt = "MATCH (person:Person {'id': ?})-[:knows*2..2]-(friend:Person)-[:isLocatedIn]->(city:Place) " +
                     "WITH " +
                     "  friend, " +
                     "  city, " +
@@ -530,7 +530,7 @@ public class AGDb extends Db {
                     "  friend, " +
                     "  city, " +
                     "  array_length(posts, 1) AS postCount, " +
-                    "  array_length(c10_fc(posts, person.id::int8), 1) AS commonPostCount " +
+                    "  c10_fc(posts, person.id::int8) AS commonPostCount " +
                     "RETURN " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +

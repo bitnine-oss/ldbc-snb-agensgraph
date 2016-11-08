@@ -1,3 +1,34 @@
+create or replace function c7(likes jsonb[])
+returns jsonb as $$
+declare
+	elem jsonb;
+	latestLikeTime int8;
+	latestLikeId int8;
+	latestLike jsonb;
+begin
+	latestLikeTime := 0;
+	foreach elem in array likes
+	loop
+		if (elem->>'likeTime')::int8 > latestLikeTime
+		then
+			latestLikeTime := (elem->>'likeTime')::int8;
+			latestLikeId := (elem->>'id')::int8;
+			latestLike := elem;
+		elsif (elem->>'likeTime')::int8 = latestLikeTime
+		then
+			if (elem->>'id')::int8 < latestLikeId
+			then
+				latestLikeTime := (elem->>'likeTime')::int8;
+				latestLikeId := (elem->>'id')::int8;
+				latestLike := elem;
+			end if;
+		end if;
+	end loop;
+
+	return latestLike;
+end
+$$ language plpgsql;
+
 -- used in complex query 10
 drop function c10_fc(posts vertex[], person_id int8);
 create or replace function c10_fc(posts vertex[], person_id int8)

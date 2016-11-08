@@ -392,10 +392,9 @@ public class AGDb extends Db {
 
             String stmt = "MATCH (person:Person {'id': ?})<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
                     "WITH liker, message, l.\"creationDate\"::int8 AS likeTime, person " +
-                    "ORDER BY likeTime DESC, message.id::int8 ASC " +
                     "WITH " +
                     "  liker, " +
-                    "  (array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', likeTime)))[1] AS latestLike, " +
+                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', likeTime, 'id', message.id::int8))) AS latestLike, " +
                     "  person " +
                     "RETURN " +
                     "  liker.id::int8 AS personId, " +
@@ -408,7 +407,7 @@ public class AGDb extends Db {
                     "    ELSE latestLike->'msg'->>'imagefile' " +
                     "  END AS messageContent, " +
                     "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency, " +
-                    "  not exists((liker)-[:knows]->(person)) " +
+                    "  not exists((liker)-[:knows]-(person)) " +
                     "ORDER BY likeTime DESC, personId ASC " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery7.personId(), ldbcQuery7.limit());

@@ -529,7 +529,8 @@ public class AGDb extends Db {
                     "WITH  " +
                     "  friend, " +
                     "  city, " +
-                    "  array_length(posts, 1) AS postCount, " +
+                    "  case posts = '{}' when true then 0 " +
+                    "  else array_length(posts, 1) end AS postCount, " +
                     "  c10_fc(posts, person.id::int8) AS commonPostCount " +
                     "RETURN " +
                     "  friend.id::int8 AS personId, " +

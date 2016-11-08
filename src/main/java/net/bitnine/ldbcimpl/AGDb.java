@@ -407,7 +407,7 @@ public class AGDb extends Db {
                     "    WHEN true THEN latestLike->'msg'->>'content' " +
                     "    ELSE latestLike->'msg'->>'imagefile' " +
                     "  END AS messageContent, " +
-                    "  (latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8 AS latencyAsMilli, " +
+                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency, " +
                     "  not exists((liker)-[:knows]->(person)) " +
                     "ORDER BY likeTime DESC, personId ASC " +
                     "LIMIT ?";

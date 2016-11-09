@@ -521,7 +521,7 @@ public class AGDb extends Db {
                     "  ((birthdayMonth = ? AND birthdayDay >= 21) OR " +
                     "   (birthdayMonth = (? % 12)+1 AND birthdayDay < 22)) " +
                     "  AND friend.id != person.id " +
-                    "  AND not exists((friend)-[:knows]->(person)) " +
+                    "  AND not exists((friend)-[:knows]-(person)) " +
                     "WITH DISTINCT friend, city, person " +
                     "OPTIONAL MATCH (friend)<-[:hasCreator]-(post:Post) " +
                     "WITH friend, city, array_remove(array_agg(post), NULL) AS posts, person " +

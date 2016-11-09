@@ -65,42 +65,31 @@ declare
 	weight double precision;
 	prev int8;
 	curr int8;
-	p1 int;
-	p2 int;
-	p3 int;
+	l1 int;
+	l2 int;
+	l3 int;
 	rowcount int;
 begin
+	set enable_bitmapscan = off;
 	weight := 0.0;
 	for i in 1..array_length(node_ids, 1) - 1 loop
 		prev := node_ids[i];
 		curr := node_ids[i+1];
-		execute 'match p=(p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
+		execute 'match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
 			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
-			|| 'return length(p)'
-			into p1 using curr, prev;
-		GET DIAGNOSTICS rowcount := ROW_COUNT;
-		if rowcount = 0 then
-			p1 := 0;
-		end if;
-		execute 'match p=(p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
+			|| 'return count(*)'
+			into l1 using curr, prev;
+		execute 'match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
 			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
-			|| 'return length(p)'
-			into p2 using prev, curr;
-		GET DIAGNOSTICS rowcount := ROW_COUNT;
-		if rowcount = 0 then
-			p2 := 0;
-		end if;
-		execute 'match p=(p1:Person)-[:hasCreator]-(:"Comment")-[:replyOf]-(:"Comment")-[:hasCreator]-(p2:Person) '
+			|| 'return count(*)'
+			into l2 using prev, curr;
+		execute 'match (p1:Person)-[:hasCreator]-(:"Comment")-[:replyOf]-(:"Comment")-[:hasCreator]-(p2:Person) '
 			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
-			|| 'return length(p)'
-			into p3 using prev, curr;
-		GET DIAGNOSTICS rowcount := ROW_COUNT;
-		if rowcount = 0 then
-			p3 := 0;
-		end if;
-
-		weight := weight + p1 * 1.0 + p2 * 1.0 + p3 * 0.5;
+			|| 'return count(*)'
+			into l3 using prev, curr;
+		weight := weight + l1 * 1.0 + l2 * 1.0 + l3 * 0.5;
 	end loop;
+	set enable_bitmapscan = on;
 
 	return weight;
 end

@@ -354,7 +354,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person) " +
-                    ", (friend:Person)<-[:hasCreator]-(friendPost:Post)-[:hasTag]->(knownTag:Tag {'name': ?}) " +
+                    "MATCH (friend)<-[:hasCreator]-(friendPost:Post)-[:hasTag]->(knownTag:Tag {'name': ?}) " +
                     "WITH person, friend, friendPost, knownTag " +
                     "WHERE person.id != friend.id " +
                     "MATCH (friendPost)-[:hasTag]->(commonTag:Tag) " +

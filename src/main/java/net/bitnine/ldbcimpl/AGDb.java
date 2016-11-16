@@ -353,6 +353,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
+            client.execute("set enable_material = off");
             String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person) " +
                     "MATCH (friend)<-[:hasCreator]-(friendPost:Post)-[:hasTag]->(knownTag:Tag {'name': ?}) " +
                     "WITH person, friend, friendPost, knownTag " +
@@ -376,8 +377,10 @@ public class AGDb extends Db {
                     resultList.add(new LdbcQuery6Result(rs.getString(1), rs.getInt(2)));
                 }
             } catch (SQLException e) {
+                client.execute("set enable_material = on");
                 throw new AGClientException(e);
             }
+            client.execute("set enable_material = on");
 
             resultReporter.report(0, resultList, ldbcQuery6);
         }
@@ -470,7 +473,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (:Person {'id': ?})-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(message:Message) " +
+            String stmt = "MATCH (:Person {'id': ?})-[:knows*1..2]-(friend:Person) " +
+                    "MATCH (friend)<-[:hasCreator]-(message:Message) " +
                     "WHERE message.creationDate::int8 < ? " +
                     "RETURN DISTINCT " +
                     "  friend.id::int8 AS personId, " +
@@ -566,6 +570,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
+            client.execute("set enable_seqscan = off");
             String stmt = "MATCH (person:Person {'id': ?})-[:knows*1..2]-(friend:Person) " +
                     "WHERE person.id != friend.id " +
                     "WITH DISTINCT friend " +
@@ -589,8 +594,10 @@ public class AGDb extends Db {
                             rs.getString(4), rs.getInt(5)));
                 }
             } catch (SQLException e) {
+                client.execute("set enable_seqscan = on");
                 throw new AGClientException(e);
             }
+            client.execute("set enable_seqscan = on");
 
             resultReporter.report(0, resultList, ldbcQuery11);
         }

@@ -417,6 +417,39 @@ create foreign table fdwTagClass
 load from fdwTagClass as row
 create (:TagClass =row_to_json(row)::jsonb);
 
+-- Make property indexes for 'id' field of vertexes
+--- should be replaced to using CREATE PROPERTY INDEX
+---- property
+--create PROPERTY index on forum (id);
+--create PROPERTY index on message (id);
+--create PROPERTY index on post (id);
+--create PROPERTY index on "Comment" (id);
+--create PROPERTY index on organization (id);
+--create PROPERTY index on person (id);
+--create PROPERTY index on place (id);
+--create PROPERTY index on tag (id);
+--create PROPERTY index on tagclass (id);
+create UNIQUE index on ldbc.forum (((properties #>> '{id}'::text[])::int8));      
+create UNIQUE index on ldbc.message (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc.post (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc."Comment" (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc.organization (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc.person (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc.place (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc.tag (((properties #>> '{id}'::text[])::int8));
+create UNIQUE index on ldbc.tagclass (((properties #>> '{id}'::text[])::int8));
+
+-- Analyze vertices
+analyze ldbc.forum;
+analyze ldbc.message;
+analyze ldbc.post;
+analyze ldbc."Comment";
+analyze ldbc.organization;
+analyze ldbc.person;
+analyze ldbc.place;
+analyze ldbc.tag;
+analyze ldbc.tagclass;
+
 -- Edge
 --- containerOf
 \set file_name :source_path/forum_containerOf_post_0_0.csv
@@ -988,17 +1021,6 @@ create unique index on ldbc.Place (id);
 create unique index on ldbc.Tag (id);
 create unique index on ldbc.TagClass (id);
 
--- property
-create PROPERTY index on forum (id);
-create PROPERTY index on message (id);
-create PROPERTY index on post (id);
-create PROPERTY index on "Comment" (id);
-create PROPERTY index on organization (id);
-create PROPERTY index on person (id);
-create PROPERTY index on place (id);
-create PROPERTY index on tag (id);
-create PROPERTY index on tagclass (id);
-
 -- gin
 create index on ldbc.forum using gin(properties jsonb_path_ops);
 create index on ldbc.post using gin(properties jsonb_path_ops);
@@ -1107,17 +1129,6 @@ create index on ldbc.likes using gin(properties jsonb_path_ops);
 create index on ldbc.replyof using gin(properties jsonb_path_ops);
 create index on ldbc.studyat using gin(properties jsonb_path_ops);
 create index on ldbc.workat using gin(properties jsonb_path_ops);
-
--- Analyze vertices
-analyze ldbc.forum;
-analyze ldbc.message;
-analyze ldbc.post;
-analyze ldbc."Comment";
-analyze ldbc.organization;
-analyze ldbc.person;
-analyze ldbc.place;
-analyze ldbc.tag;
-analyze ldbc.tagclass;
 
 -- Analyze edges 
 analyze ldbc.containerOf;

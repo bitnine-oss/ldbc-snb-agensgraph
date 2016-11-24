@@ -83,10 +83,17 @@ begin
 			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
 			|| 'return count(*)'
 			into l2 using prev, curr;
-		execute 'match (p1:Person)-[:hasCreator]-(:"Comment")-[:replyOf]-(:"Comment")-[:hasCreator]-(p2:Person) '
-			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
-			|| 'return count(*)'
-			into l3 using prev, curr;
+		execute 'select sum(cnt) from ('
+			||  '  select cnt from ('
+			||  '    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person) '
+			||  '    where p1.id::int8 = $1 and p2.id::int8 = $2 '
+		    ||  '    return count(*) as cnt) as l'
+			||  '  union all '
+			||  '  select cnt from ('
+			||  '    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person) '
+			||  '    where p1.id::int8 = $3 and p2.id::int8 = $4'
+			||  '	 return count(*) as cnt) as r) as uni'
+			into l3 using prev, curr, curr, prev;
 		weight := weight + l1 * 1.0 + l2 * 1.0 + l3 * 0.5;
 	end loop;
 	set enable_bitmapscan = on;

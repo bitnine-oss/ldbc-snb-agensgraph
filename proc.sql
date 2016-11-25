@@ -30,13 +30,13 @@ end
 $$ language plpgsql;
 
 -- used in complex query 10
-drop function c10_fc(posts vertex[], person_id int8);
 create or replace function c10_fc(posts vertex[], person_id int8)
 returns int8 as $$
 declare
 	cnt int8 := 0;
 	has_interest_tag boolean;
 	post vertex;
+	post_id int8;
 begin
 	if posts is null
 	then
@@ -45,10 +45,10 @@ begin
 
 	foreach post in array posts
 	loop
-		execute 'match (post:Post)-[:hasTag]->(:Tag)<-[:hasInterest]-(p:Person) '
-			|| 'where post.id::int8 = $1 and p.id::int8 = $2'
-			|| 'return count(p) > 0'
-			into has_interest_tag using (properties(post)).id::int8, person_id;
+		post_id = (properties(post)).id::int8;
+		match (post:Post)-[:hasTag]->(:Tag)<-[:hasInterest]-(p:Person)
+		where post.id::int8 = post_id and p.id::int8 = person_id
+		return count(p) > 0 into has_interest_tag;
 		if has_interest_tag
 		then
 			cnt := cnt + 1;

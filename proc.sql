@@ -75,25 +75,28 @@ begin
 	for i in 1..array_length(node_ids, 1) - 1 loop
 		prev := node_ids[i];
 		curr := node_ids[i+1];
-		execute 'match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
-			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
-			|| 'return count(*)'
-			into l1 using curr, prev;
-		execute 'match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person) '
-			|| 'where p1.id::int8 = $1 and p2.id::int8 = $2 '
-			|| 'return count(*)'
-			into l2 using prev, curr;
-		execute 'select sum(cnt) from ('
-			||  '  select cnt from ('
-			||  '    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person) '
-			||  '    where p1.id::int8 = $1 and p2.id::int8 = $2 '
-		    ||  '    return count(*) as cnt) as l'
-			||  '  union all '
-			||  '  select cnt from ('
-			||  '    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person) '
-			||  '    where p1.id::int8 = $3 and p2.id::int8 = $4'
-			||  '	 return count(*) as cnt) as r) as uni'
-			into l3 using prev, curr, curr, prev;
+
+		match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person)
+		where p1.id::int8 = curr and p2.id::int8 = prev
+		return count(*)
+		into l1;
+
+		match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person)
+		where p1.id::int8 = prev and p2.id::int8 = curr
+		return count(*)
+		into l2;
+
+		select sum(cnt) into l3 from (
+		  select cnt from (
+		    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person)
+		    where p1.id::int8 = prev and p2.id::int8 = curr
+		    return count(*) as cnt) as l
+		  union all
+		  select cnt from (
+		    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person)
+		    where p1.id::int8 = curr and p2.id::int8 = prev
+			 return count(*) as cnt) as r) as uni;
+
 		weight := weight + l1 * 1.0 + l2 * 1.0 + l3 * 0.5;
 	end loop;
 	set enable_bitmapscan = on;
@@ -207,8 +210,7 @@ declare
 begin
 	foreach gid in array graphids 
 	loop
-		execute 'match (p:Person) where id(p) = $1 return p.id::int8' 
-				into pid using gid;
+		match (p:Person) where id(p) = gid return p.id::int8 into pid;
 		ret := array_append(ret, pid);
 	end loop;
 	return ret;
@@ -235,18 +237,20 @@ create or replace function allshortestpath_vertex_ids(p1_id int8, p2_id int8)
 returns table(vertex_ids int8[]) as $$
 declare
 	graphids graphid[];
-	p1 graphid;
-	p2 graphid;
+	g1 graphid;
+	g2 graphid;
 begin
 	if p1_id = p2_id then
 		vertex_ids := array_append(vertex_ids, p1_id);
 		return next;
 		return;
 	end if;
-	execute 'match (p1:Person), (p2:Person) '
-		||  'where p1.id::int8 = $1 and p2.id::int8 = $2 return id(p1), id(p2)'
-		into p1, p2 using p1_id, p2_id;
-	for graphids in select paths from knows_shortestpaths(p1, p2)
+
+	match (p1:Person), (p2:Person)
+	where p1.id::int8 = p1_id and p2.id::int8 = p2_id return id(p1), id(p2)
+	into g1, g2;
+
+	for graphids in select paths from knows_shortestpaths(g1, g2)
 	loop
 		vertex_ids := conv_person_id(graphids);
 		return next;

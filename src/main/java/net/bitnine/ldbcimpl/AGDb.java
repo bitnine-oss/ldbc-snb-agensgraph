@@ -10,6 +10,8 @@ import net.bitnine.ldbcimpl.excpetions.AGClientException;
 import net.bitnine.ldbcimpl.util.DateUtils;
 import net.bitnine.ldbcimpl.util.JsonArrayUtils;
 
+import org.postgresql.ds.PGPoolingDataSource;
+
 import java.io.IOException;
 import java.sql.Array;
 import java.sql.ResultSet;
@@ -17,35 +19,52 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.text.SimpleDateFormat;
 
 
 public class AGDb extends Db {
 
-    static class AGDbConnectionState extends DbConnectionState {
+    public class AGDbConnectionState extends DbConnectionState {
 
-        private AGClient client;
+	private PGPoolingDataSource source;
+        private String connStr;
 
         private AGDbConnectionState(Map<String, String> properties) {
             String server = properties.get("server");
             if (server == null)
                 server = "127.0.0.1";
+
             String port = properties.get("port");
             if (port == null)
                 port = "5432";
-            String connStr = "jdbc:agensgraph://"
+
+            connStr = "jdbc:agensgraph://"
                     + server + ":"
                     + port + "/"
                     + properties.get("dbname");
-            client = new AGClient(connStr, properties.get("user"), properties.get("password"));
+
+/* using PGPoolingDataSource 
+ * XXX:Currently, using PGPoolingDataSource incurs PGobject to Jsonb conversion error */
+/*
+            source = new PGPoolingDataSource();
+            source.setDataSourceName("Agens Graph Data Source");
+            source.setServerName(server);
+            source.setDatabaseName(properties.get("dbname"));
+            source.setUser(properties.get("user"));
+            source.setPassword(properties.get("password"));
+            source.setMaxConnections(100); // modify this
+*/
         }
 
-        AGClient getClent() {
-            return client;
+        AGClient getClient() {
+//            return new AGClient(source);
+            return new AGClient(connStr);
         }
 
         @Override
         public void close() throws IOException {
-            client.close();
+            if (source != null)
+                source.close();
         }
     }
 
@@ -103,7 +122,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery1 ldbcQuery1,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState) dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState) dbConnectionState).getClient();
 
             String query ="MATCH (p:Person)-[path:knows*1..3]-(friend:Person {'firstname': ?}) " +
                     "WHERE p.id::int8 = ? " +
@@ -173,10 +192,12 @@ public class AGDb extends Db {
                     ));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery1);
+            client.close();
         }
     }
 
@@ -186,7 +207,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery2 ldbcQuery2,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (p:Person)-[:knows]-(friend:Person)<-[:hasCreator]-(message:Message) " +
                     "WHERE p.id::int8 = ? AND message.creationDate::int8 <= ? " +
@@ -212,10 +233,12 @@ public class AGDb extends Db {
                             rs.getLong(4), rs.getString(5), rs.getLong(6)));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery2);
+            client.close();
         }
     }
 
@@ -225,7 +248,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery3 ldbcQuery3,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(messageX:Message), " +
                     "(messageX:Message)-[:isLocatedIn]->(countryX:Place) " +
@@ -268,10 +291,12 @@ public class AGDb extends Db {
                             rs.getLong(4), rs.getLong(5), rs.getLong(6)));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery3);
+            client.close();
         }
     }
 
@@ -281,7 +306,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery4 ldbcQuery4,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
 /*            String stmt = "MATCH (person:Person)-[:knows]-(:Person)<-[:hasCreator]-(post:Post)-[:hasTag]->(tag:Tag) " +
                     "WHERE person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
@@ -330,10 +355,12 @@ public class AGDb extends Db {
                     resultList.add(new LdbcQuery4Result(rs.getString(1), rs.getInt(2)));
                 }
             } catch (SQLException e) {
+            	client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery4);
+	    client.close();
         }
     }
 
@@ -343,7 +370,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery5 ldbcQuery5,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
                     "WHERE person.id::int8 = ? AND membership.\"joinDate\"::int8 > ? AND person.id != friend.id " +
@@ -363,10 +390,12 @@ public class AGDb extends Db {
                     resultList.add(new LdbcQuery5Result(rs.getString(1), rs.getInt(2)));
                 }
             } catch (SQLException e) {
+		client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery5);
+	    client.close();
         }
     }
 
@@ -377,7 +406,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery6 ldbcQuery6,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             client.execute("set enable_material = off");
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
@@ -404,11 +433,13 @@ public class AGDb extends Db {
                 }
             } catch (SQLException e) {
                 client.execute("set enable_material = on");
+		client.close();
                 throw new AGClientException(e);
             }
             client.execute("set enable_material = on");
 
             resultReporter.report(0, resultList, ldbcQuery6);
+            client.close();
         }
     }
 
@@ -417,7 +448,7 @@ public class AGDb extends Db {
 
         @Override
         public void executeOperation(LdbcQuery7 ldbcQuery7, DbConnectionState dbConnectionState, ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
                     "WHERE person.id::int8 = ? " +
@@ -450,10 +481,12 @@ public class AGDb extends Db {
                             rs.getInt(7), rs.getBoolean(8)));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery7);
+            client.close();
         }
     }
 
@@ -464,7 +497,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery8 ldbcQuery8,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (p:Person)<-[:hasCreator]-()<-[:replyOf]-(c:\"Comment\")-[:hasCreator]->(person:Person) " +
                     "WHERE p.id::int8 = ? " +
@@ -485,10 +518,12 @@ public class AGDb extends Db {
                     resultList.add(new LdbcQuery8Result(rs.getLong(1), rs.getString(2),
                             rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getString(6)));
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery8);
+            client.close();
         }
     }
 
@@ -499,7 +534,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery9 ldbcQuery9,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
                     "MATCH (friend)<-[:hasCreator]-(message:Message) " +
@@ -526,10 +561,12 @@ public class AGDb extends Db {
                             rs.getLong(4), rs.getString(5), rs.getLong(6)));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery9);
+            client.close();
         }
     }
 
@@ -540,7 +577,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery10 ldbcQuery10,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)-[:knows*2..2]-(friend:Person)-[:isLocatedIn]->(city:Place) " +
                     "WHERE person.id::int8 = ? " +
@@ -583,10 +620,12 @@ public class AGDb extends Db {
                             rs.getInt(4), rs.getString(5), rs.getString(6)));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery10);
+            client.close();
         }
     }
 
@@ -597,7 +636,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery11 ldbcQuery11,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             client.execute("set enable_seqscan = off");
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
@@ -624,11 +663,13 @@ public class AGDb extends Db {
                 }
             } catch (SQLException e) {
                 client.execute("set enable_seqscan = on");
+                client.close();
                 throw new AGClientException(e);
             }
             client.execute("set enable_seqscan = on");
 
             resultReporter.report(0, resultList, ldbcQuery11);
+            client.close();
         }
     }
 
@@ -639,7 +680,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery12 ldbcQuery12,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)-[:knows]-(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
@@ -669,10 +710,12 @@ public class AGDb extends Db {
                     }
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery12);
+            client.close();
         }
     }
 
@@ -683,7 +726,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery13 ldbcQuery13,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person1:Person), (person2:Person) " +
                     "WHERE person1.id::int8 = ? AND person2.id::int8 = ? " +
@@ -700,10 +743,12 @@ public class AGDb extends Db {
                 if (rs.next())
                     result = new LdbcQuery13Result(rs.getInt(1));
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, result, ldbcQuery13);
+            client.close();
         }
     }
 
@@ -714,7 +759,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery14 ldbcQuery14,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
             String stmt = "SELECT " +
                     "  extract_ids(vertex_ids) AS pathNodeIds, " +
                     "  calc_weight(vertex_ids) AS weight " +
@@ -729,10 +774,12 @@ public class AGDb extends Db {
                     resultList.add(new LdbcQuery14Result(pathNodeIds, rs.getDouble(2)));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcQuery14);
+            client.close();
         }
     }
 
@@ -743,7 +790,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery1PersonProfile ldbcShortQuery1PersonProfile,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (r:Person)-[:isLocatedIn]->(s:Place) " +
                     "WHERE r.id::int8 = ? " + 
@@ -769,10 +816,12 @@ public class AGDb extends Db {
                             rs.getString(7), rs.getLong(8));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, result, ldbcShortQuery1PersonProfile);
+            client.close();
         }
     }
 
@@ -783,7 +832,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery2PersonPosts ldbcShortQuery2PersonPosts,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)<-[:hasCreator]-(m:Message) " +
                     "MATCH (m)-[:replyOf*0..]->(p:Post) " +
@@ -816,10 +865,12 @@ public class AGDb extends Db {
                     ));
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcShortQuery2PersonPosts);
+            client.close();
         }
     }
 
@@ -830,7 +881,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery3PersonFriends ldbcShortQuery3PersonFriends,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (person:Person)-[r:knows]-(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
@@ -851,10 +902,12 @@ public class AGDb extends Db {
                     );
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, result, ldbcShortQuery3PersonFriends);
+            client.close();
         }
     }
 
@@ -865,7 +918,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery4MessageContent ldbcShortQuery4MessageContent,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (m:Message) " +
                     "WHERE m.id::int8 = ? " +
@@ -885,10 +938,12 @@ public class AGDb extends Db {
                     );
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, result, ldbcShortQuery4MessageContent);
+            client.close();
         }
     }
 
@@ -899,7 +954,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery5MessageCreator ldbcShortQuery5MessageCreator,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (m:Message)-[:hasCreator]->(p:Person) " +
                     "WHERE m.id::int8 = ? " +
@@ -918,10 +973,12 @@ public class AGDb extends Db {
                     );
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, result, ldbcShortQuery5MessageCreator);
+            client.close();
         }
     }
 
@@ -932,7 +989,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery6MessageForum ldbcShortQuery6MessageForum,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (m:Message)-[:replyOf*0..]->(p:Post)<-[:containerOf]-(f:Forum)-[:hasModerator]->(mod:Person) " +
                     "WHERE m.id::int8 = ? " +
@@ -953,10 +1010,12 @@ public class AGDb extends Db {
                     );
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, result, ldbcShortQuery6MessageForum);
+            client.close();
         }
     }
 
@@ -967,7 +1026,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcShortQuery7MessageReplies ldbcShortQuery7MessageReplies,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (m:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreator]->(p:Person) " +
                     "WHERE m.id::int8 = ? " +
@@ -995,10 +1054,12 @@ public class AGDb extends Db {
                     );
                 }
             } catch (SQLException e) {
+                client.close();
                 throw new AGClientException(e);
             }
 
             resultReporter.report(0, resultList, ldbcShortQuery7MessageReplies);
+            client.close();
         }
     }
 
@@ -1009,7 +1070,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate1AddPerson ldbcUpdate1AddPerson,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "create (:Person ?)";
             JsonObject prop = new JsonObject();
@@ -1023,7 +1084,6 @@ public class AGDb extends Db {
             prop.put("browserused", ldbcUpdate1AddPerson.browserUsed());
             prop.put("speaks", JsonArray.create(ldbcUpdate1AddPerson.languages()));
             prop.put("email", JsonArray.create(ldbcUpdate1AddPerson.emails()));
-            client.execute(stmt, prop);
 
             stmt =  "MATCH (p:Person), (c:Place) " +
                     "WHERE p.id::int8 = ? AND c.id::int8 = ? " +
@@ -1100,6 +1160,7 @@ public class AGDb extends Db {
             }
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate1AddPerson);
+            client.close();
         }
     }
 
@@ -1110,7 +1171,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate2AddPostLike ldbcUpdate2AddPostLike,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (p:Person), (m:Post) " +
                     "WHERE p.id::int8 = ? AND m.id::int8 = ? " +
@@ -1122,6 +1183,7 @@ public class AGDb extends Db {
                     ldbcUpdate2AddPostLike.creationDate());
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate2AddPostLike);
+            client.close();
         }
     }
 
@@ -1132,7 +1194,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate3AddCommentLike ldbcUpdate3AddCommentLike,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (p:Person), (m:\"Comment\") " +
                     "WHERE p.id::int8 = ? AND m.id::int8 = ? " +
@@ -1144,6 +1206,7 @@ public class AGDb extends Db {
                     ldbcUpdate3AddCommentLike.creationDate());
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate3AddCommentLike);
+            client.close();
         }
     }
 
@@ -1153,7 +1216,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate4AddForum ldbcUpdate4AddForum,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "CREATE (f:Forum {id: ?, title: ?, creationDate: ?})";
             client.execute(stmt,
@@ -1173,6 +1236,7 @@ public class AGDb extends Db {
             client.execute(stmt, ldbcUpdate4AddForum.forumId(), ldbcUpdate4AddForum.moderatorPersonId(), tagIds);
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate4AddForum);
+            client.close();
         }
     }
 
@@ -1183,7 +1247,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate5AddForumMembership ldbcUpdate5AddForumMembership,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (f:Forum), (p:Person) " +
                     "WHERE f.id::int8 = ? AND p.id::int8 = ? " +
@@ -1195,6 +1259,7 @@ public class AGDb extends Db {
                     ldbcUpdate5AddForumMembership.joinDate());
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate5AddForumMembership);
+            client.close();
         }
     }
 
@@ -1205,7 +1270,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate6AddPost ldbcUpdate6AddPost,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "CREATE (:Post ?)";
             JsonObject prop = new JsonObject();
@@ -1236,6 +1301,7 @@ public class AGDb extends Db {
                     ldbcUpdate6AddPost.forumId(), ldbcUpdate6AddPost.countryId(), tagIds);
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate6AddPost);
+            client.close();
         }
     }
 
@@ -1246,7 +1312,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate7AddComment ldbcUpdate7AddComment,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "CREATE (:\"Comment\" ?)";
             JsonObject prop = new JsonObject();
@@ -1279,6 +1345,7 @@ public class AGDb extends Db {
                     replyOfId, ldbcUpdate7AddComment.countryId(), tagIds);
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate7AddComment);
+            client.close();
         }
     }
 
@@ -1289,7 +1356,7 @@ public class AGDb extends Db {
         public void executeOperation(LdbcUpdate8AddFriendship ldbcUpdate8AddFriendship,
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
-            AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
+            AGClient client = ((AGDbConnectionState)dbConnectionState).getClient();
 
             String stmt = "MATCH (p1:Person), (p2:Person) " +
                     "WHERE p1.id::int8 = ? AND p2.id::int8 = ? " +
@@ -1301,6 +1368,7 @@ public class AGDb extends Db {
                     ldbcUpdate8AddFriendship.creationDate());
 
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate8AddFriendship);
+            client.close();
         }
     }
 }

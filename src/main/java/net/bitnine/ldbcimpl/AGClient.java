@@ -23,6 +23,7 @@ public class AGClient {
         }
         try {
             conn = DriverManager.getConnection(connStr, user, password);
+            conn.setAutoCommit(false);
             Statement stmt = conn.createStatement();
             stmt.execute("set graph_path = ldbc");
             stmt.execute("commit");
@@ -98,9 +99,18 @@ public class AGClient {
         }
     }
 
+    void commit() {
+        try {
+            conn.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     void close() {
         try {
-            conn.close();
+            if (conn != null)
+                conn.close();
         } catch (SQLException e) {
             conn = null;
         }

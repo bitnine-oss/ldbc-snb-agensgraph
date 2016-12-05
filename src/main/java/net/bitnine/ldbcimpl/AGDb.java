@@ -21,34 +21,6 @@ import java.util.Map;
 
 public class AGDb extends Db {
 
-    static class AGDbConnectionState extends DbConnectionState {
-
-        private AGClient client;
-
-        private AGDbConnectionState(Map<String, String> properties) {
-            String server = properties.get("server");
-            if (server == null)
-                server = "127.0.0.1";
-            String port = properties.get("port");
-            if (port == null)
-                port = "5432";
-            String connStr = "jdbc:agensgraph://"
-                    + server + ":"
-                    + port + "/"
-                    + properties.get("dbname");
-            client = new AGClient(connStr, properties.get("user"), properties.get("password"));
-        }
-
-        AGClient getClent() {
-            return client;
-        }
-
-        @Override
-        public void close() throws IOException {
-            client.close();
-        }
-    }
-
     private DbConnectionState connectionState = null;
 
     @Override
@@ -703,6 +675,7 @@ public class AGDb extends Db {
                 throw new AGClientException(e);
             }
 
+            client.commit();
             resultReporter.report(0, result, ldbcQuery13);
         }
     }
@@ -732,6 +705,7 @@ public class AGDb extends Db {
                 throw new AGClientException(e);
             }
 
+            client.commit();
             resultReporter.report(0, resultList, ldbcQuery14);
         }
     }
@@ -1098,7 +1072,7 @@ public class AGDb extends Db {
                 argList.toArray(args);
                 client.execute(stmt, args);
             }
-
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate1AddPerson);
         }
     }
@@ -1121,6 +1095,7 @@ public class AGDb extends Db {
                     ldbcUpdate2AddPostLike.postId(),
                     ldbcUpdate2AddPostLike.creationDate());
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate2AddPostLike);
         }
     }
@@ -1143,6 +1118,7 @@ public class AGDb extends Db {
                     ldbcUpdate3AddCommentLike.commentId(),
                     ldbcUpdate3AddCommentLike.creationDate());
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate3AddCommentLike);
         }
     }
@@ -1172,6 +1148,7 @@ public class AGDb extends Db {
             Array tagIds = client.createArrayOfLong("int8", ldbcUpdate4AddForum.tagIds());
             client.execute(stmt, ldbcUpdate4AddForum.forumId(), ldbcUpdate4AddForum.moderatorPersonId(), tagIds);
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate4AddForum);
         }
     }
@@ -1194,6 +1171,7 @@ public class AGDb extends Db {
                     ldbcUpdate5AddForumMembership.personId(),
                     ldbcUpdate5AddForumMembership.joinDate());
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate5AddForumMembership);
         }
     }
@@ -1235,6 +1213,7 @@ public class AGDb extends Db {
             client.execute(stmt, ldbcUpdate6AddPost.postId(), ldbcUpdate6AddPost.authorPersonId(),
                     ldbcUpdate6AddPost.forumId(), ldbcUpdate6AddPost.countryId(), tagIds);
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate6AddPost);
         }
     }
@@ -1278,6 +1257,7 @@ public class AGDb extends Db {
             client.execute(stmt, ldbcUpdate7AddComment.commentId(), ldbcUpdate7AddComment.authorPersonId(),
                     replyOfId, ldbcUpdate7AddComment.countryId(), tagIds);
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate7AddComment);
         }
     }
@@ -1300,6 +1280,7 @@ public class AGDb extends Db {
                     ldbcUpdate8AddFriendship.person2Id(),
                     ldbcUpdate8AddFriendship.creationDate());
 
+            client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate8AddFriendship);
         }
     }

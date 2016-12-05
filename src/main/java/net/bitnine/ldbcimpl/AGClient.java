@@ -4,14 +4,9 @@ import net.bitnine.agensgraph.graph.property.JsonObject;
 import net.bitnine.agensgraph.graph.property.Jsonb;
 import net.bitnine.ldbcimpl.excpetions.AGClientException;
 
-import org.postgresql.ds.PGPoolingDataSource;
-
 import java.sql.*;
 import java.util.InputMismatchException;
 import java.util.List;
-import java.util.Properties;
-
-
 
 /**
  * Created by ktlee on 16. 10. 11.
@@ -20,50 +15,6 @@ public class AGClient {
 
     private Connection conn;
 
-    public AGClient(PGPoolingDataSource source) {
-        try {
-            conn = source.getConnection();
-            Statement stmt = conn.createStatement();
-            stmt.execute("set graph_path = ldbc");
-            stmt.execute("commit");
-            stmt.close();
-
-//            long threadId = Thread.currentThread().getId();
-//            System.out.println("[" + threadId + "] " + "AG Connection created");
-        }
-        catch (SQLException e)
-        {
-            throw new AGClientException(e);
-        }
-    }
-
-    protected void finalize() throws Throwable {
-//        long threadId = Thread.currentThread().getId();
-//        System.out.println("[" + threadId + "] " + "AG Connection closed");
-        close();
-    }
-
-    public AGClient(String connStr) {
-        try {
-            Class.forName("net.bitnine.agensgraph.Driver");
-        } catch (ClassNotFoundException e) {
-            throw new AGClientException(e);
-        }
-        try {
-            conn = DriverManager.getConnection(connStr);
-            Statement stmt = conn.createStatement();
-            stmt.execute("set graph_path = ldbc");
-            stmt.execute("commit");
-            stmt.close();
-        } catch (SQLException e) {
-            throw new AGClientException(e);
-        }
-
-//        long threadId = Thread.currentThread().getId();
-//        System.out.println("[" + threadId + "] " + "AG Connection created");
-    }
-
-/*
     public AGClient(String connStr, String user, String password) {
         try {
             Class.forName("net.bitnine.agensgraph.Driver");
@@ -71,13 +22,7 @@ public class AGClient {
             throw new AGClientException(e);
         }
         try {
-            Properties props = new Properties();
-            props.setProperty("user", user);
-            props.setProperty("password", password);
-            props.setProperty("loglevel", "2");
-
-            conn = DriverManager.getConnection(connStr, props);
-	    conn.setAutoCommit(false);
+            conn = DriverManager.getConnection(connStr, user, password);
             Statement stmt = conn.createStatement();
             stmt.execute("set graph_path = ldbc");
             stmt.execute("commit");
@@ -85,11 +30,7 @@ public class AGClient {
         } catch (SQLException e) {
             throw new AGClientException(e);
         }
-
-        long threadId = Thread.currentThread().getId();
-        System.out.println("[" + threadId + "] " + "AG Connection created");
     }
-*/
 
     ResultSet executeQuery(String query, Object ... params) {
         ResultSet rs;
@@ -159,10 +100,7 @@ public class AGClient {
 
     void close() {
         try {
-            if (conn != null) {
-                conn.close();
-                conn = null;
-            }
+            conn.close();
         } catch (SQLException e) {
             conn = null;
         }

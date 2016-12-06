@@ -263,89 +263,69 @@ create (:Organization =row_to_json(row)::jsonb);
 
 drop foreign table fdwPerson;
 create foreign table fdwPerson 
-	(
-		id int8, 
-		firstName varchar(80),
-		lastName varchar(80),
-		gender varchar(6),
-		birthday int8,
-		creationDate int8,
-		locationIP varchar(80),
-		browserUsed varchar(80)
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwPerson as row
-create (:Person =row_to_json(row)::jsonb);
+(
+	id int8, 
+	firstName varchar(80),
+	lastName varchar(80),
+	gender varchar(6),
+	birthday int8,
+	creationDate int8,
+	locationIP varchar(80),
+	browserUsed varchar(80)
+)
+server graph_import
+options 
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
 
--- Person's email
-\set file_name :source_path/person_email_emailaddress_0_0.csv
-\echo Start Loading :file_name
 
 drop foreign table fdwEmail;
 create foreign table fdwEmail 
-	(
-		id int8, 
-		email varchar(200)
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-
-drop table emailagg;
-create table emailagg as
-select id, jsonb_agg(email) as emails from fdwEmail group by id;
-
-load from emailagg as row
-create (:Email =row_to_json(row)::jsonb);
-
-MATCH (e:Email), (p:Person)
-WHERE e.id = p.id
-SET p.email = e.emails::jsonb;
-
--- Person's language
-\set file_name :source_path/person_speaks_language_0_0.csv
-\echo Start Loading :file_name
+(
+	id int8, 
+	email varchar(200)
+)
+server graph_import
+options 
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
 
 drop foreign table fdwLanguage;
 create foreign table fdwLanguage 
-	(
-		id int8, 
-		language varchar(200)
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
+(
+	id int8, 
+	language varchar(200)
+)
+server graph_import
+options 
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
 
-drop table languageagg;
-create table languageagg as
-select id, jsonb_agg(language) as speaks from fdwLanguage group by id;
+create view person_view as (
+    SELECT p.*, email, speaks
+    FROM
+        fdwPerson p LEFT OUTER JOIN
+		(SELECT id, array_agg(email) email FROM fdwEmail GROUP BY id) e ON p.id = e.id LEFT OUTER JOIN
+		(SELECT id, array_agg(language) speaks FROM fdwLanguage GROUP BY id) l ON p.id = l.id
+);
 
-load from languageagg as row
-create (:Language =row_to_json(row)::jsonb);
-
-MATCH (l:Language), (p:Person)
-WHERE l.id = p.id
-SET p.speaks = l.speaks::jsonb;
+load from fdwPerson as row
+create (:Person =row_to_json(row)::jsonb);
 
 -- Place
 \set file_name :source_path/place_0_0.csv

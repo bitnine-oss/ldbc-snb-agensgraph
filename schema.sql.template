@@ -1146,3 +1146,37 @@ VACUUM analyze ldbc.likes;
 VACUUM analyze ldbc.replyOf;
 VACUUM analyze ldbc.studyAt;
 VACUUM analyze ldbc.workAt;
+
+-- denormalization & cluster
+
+-- message
+
+drop table ldbc.message4;
+
+create table ldbc.message4(id, properties) as
+select m.id, (m.properties
+	|| ('{ "creatorID": ' || h."end"
+	||  '}')::jsonb)
+from ldbc.message m, ldbc.hascreator h
+where m.id = h.start;
+
+create property index on message4 (("creatorID"::graphid), ("creationdate"::int8));
+
+cluster verbose ldbc.message4 using message4_property_idx;
+
+-- post
+
+drop table ldbc.post4;
+
+create table ldbc.post4(id, properties) as
+select m.id, (m.properties
+	|| ('{ "creatorID": ' || h."end"
+	||  ', "forumID": '   || c.start
+	||  '}')::jsonb)
+from ldbc.message m, ldbc.hascreator h, ldbc.containerof c
+where m.id = h.start
+  and m.id = c."end";
+
+create property index on post4 (("forumID"::graphid),("creatorID"::graphid));
+
+cluster verbose ldbc.post4 using post4_property_idx;

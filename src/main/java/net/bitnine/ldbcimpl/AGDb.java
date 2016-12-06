@@ -318,15 +318,18 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
-                    "WHERE person.id::int8 = ? AND membership.\"joinDate\"::int8 > ? AND person.id != friend.id " +
-                    "WITH DISTINCT friend, forum " +
-                    "OPTIONAL MATCH (friend)<-[:hasCreator]-(post:Post)<-[:containerOf]-(forum) " +
-                    "WITH forum, count(post) AS postCount " +
-                    "ORDER BY postCount DESC, forum.id::int8 ASC " +
+                    "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
+                    "AND membership.\"joinDate\"::int8 > ? " +
+                    "WITH DISTINCT id(friend) AS friendgid, id(forum) AS forumgid, forum.id::int8 AS forumId, forum.title AS forumTitle " +
+                    "OPTIONAL MATCH (post:post4) " +
+                    "WHERE friendgid = post.\"creatorID\"::graphid and post.\"forumID\"::graphid = forumgid " +
+                    "WITH forumTitle, forumId, count(post) AS postCount " +
+                    "ORDER BY postCount DESC, forumId ASC " +
                     "RETURN " +
-                    "  forum.title AS forumTitle, " +
+                    "  forumTitle, " +
                     "  postCount " +
                     "LIMIT ?";
+
             ResultSet rs = client.executeQuery(stmt, ldbcQuery5.personId(), ldbcQuery5.minDate(), ldbcQuery5.limit());
 
             List<LdbcQuery5Result> resultList = new ArrayList<>();
@@ -473,21 +476,26 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
-                    "MATCH (friend)<-[:hasCreator]-(message:Message) " +
-                    "WHERE person.id::int8 = ? AND  message.creationDate::int8 < ? " +
-                    "RETURN DISTINCT " +
-                    "  friend.id::int8 AS personId, " +
-                    "  friend.firstName AS personFirstName, " +
-                    "  friend.lastName AS personLastName, " +
-                    "  message.id::int8 AS messageId, " +
-                    "  CASE message.content is not null " +
-                    "    WHEN true THEN message.content " +
-                    "    ELSE message.imageFile " +
-                    "  END AS messageContent, " +
-                    "  message.creationDate::int8 AS messageCreationDate " +
-                    "ORDER BY messageCreationDate DESC, messageId ASC " +
-                    "LIMIT ?";
+            String stmt = "MATCH (person:Person)-[:KNOWS*1..2]-(friend:Person) " +
+                    "WHERE person.id::int8 = ? " +
+                    "WITH DISTINCT" +
+                    "   id(friend)::graphid AS friendid, " +
+                    "   friend.id::int8 AS personId, " +
+                    "   friend.firstName AS personFirstName, " +
+                    "   friend.lastName AS personLastName " +
+                    "MATCH (message:Message4) " +
+                    " WHERE message.creationDate::int8 < ? " +
+                    "   AND message.\"creatorID\"::graphid = friendid " +
+                    " RETURN " +
+                    "   personId, personFirstName, personLastName, " +
+                    "   message.id::int8 AS messageId, " +
+                    "   CASE message.content is not null " +
+                    "     WHEN true THEN message.content " +
+                    "     ELSE message.imageFile " +
+                    "   END AS messageContent, " +
+                    "   message.creationDate::int8 AS messageCreationDate " +
+                    " ORDER BY messageCreationDate DESC, messageId ASC " +
+                    " LIMIT ?" ;
             ResultSet rs = client.executeQuery(stmt, ldbcQuery9.personId(), ldbcQuery9.maxDate(),
                     ldbcQuery9.limit());
 

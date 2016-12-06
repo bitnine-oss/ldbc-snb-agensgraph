@@ -354,23 +354,20 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            client.execute("set enable_material = off");
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
-                    "MATCH (friend)<-[:hasCreator]-(friendPost:Post)-[:hasTag]->(knownTag:Tag {'name': ?}) " +
-                    "WITH person, friend, friendPost, knownTag " +
-                    "WHERE person.id::int8 = ? AND person.id != friend.id " +
-                    "MATCH (friendPost)-[:hasTag]->(commonTag:Tag) " +
-                    "WHERE commonTag.id != knownTag.id " +
-                    "WITH DISTINCT commonTag, knownTag, friend " +
-                    "MATCH (commonTag)<-[:hasTag]-(commonPost:Post)-[:hasTag]->(knownTag) " +
-                    "WHERE exists((commonPost)-[:hasCreator]->(friend)) " +
+                    "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
+                    "WITH DISTINCT id(friend) AS friendgid " +
+                    "MATCH (friendPost:Post4)-[:hasTag]->(knownTag:Tag) " +
+                    "WHERE friendPost.\"creatorID\"::graphid = friendgid " +
+                    "AND knownTag.name <> ? " +
+                    "AND exists((friendPost)-[:hasTag]->(:Tag {'name': ?})) " +
                     "RETURN " +
-                    "  commonTag.name AS tagName, " +
-                    "  count(commonPost) AS postCount " +
+                    "  knownTag.name AS tagName, " +
+                    "  count(friendPost) AS postCount " +
                     "ORDER BY postCount DESC, tagName ASC " +
                     "LIMIT ?";
-            ResultSet rs = client.executeQuery(stmt, ldbcQuery6.tagName(), ldbcQuery6.personId(),
-                    ldbcQuery6.limit());
+            ResultSet rs = client.executeQuery(stmt, ldbcQuery6.personId(),
+                    ldbcQuery6.tagName(), ldbcQuery6.tagName(), ldbcQuery6.limit());
 
             List<LdbcQuery6Result> resultList = new ArrayList<>();
             try {
@@ -378,10 +375,8 @@ public class AGDb extends Db {
                     resultList.add(new LdbcQuery6Result(rs.getString(1), rs.getInt(2)));
                 }
             } catch (SQLException e) {
-                client.execute("set enable_material = on");
                 throw new AGClientException(e);
             }
-            client.execute("set enable_material = on");
 
             resultReporter.report(0, resultList, ldbcQuery6);
         }

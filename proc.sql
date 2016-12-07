@@ -46,7 +46,7 @@ begin
 	foreach post in array posts
 	loop
 		post_id = (properties(post)).id::int8;
-		match (post:Post)-[:hasTag]->(:Tag)<-[:hasInterest]-(p:Person)
+		match (post:Post)-[:hasTagPost]->(:Tag)<-[:hasInterest]-(p:Person)
 		where post.id::int8 = post_id and p.id::int8 = person_id
 		return count(p) > 0 into has_interest_tag;
 		if has_interest_tag
@@ -76,24 +76,24 @@ begin
 		prev := node_ids[i];
 		curr := node_ids[i+1];
 
-		match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person)
+		match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfPost]->(:Post)-[:hasCreatorPost]->(p2:Person)
 		where p1.id::int8 = curr and p2.id::int8 = prev
 		return count(*)
 		into l1;
 
-		match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:Post)-[:hasCreator]->(p2:Person)
+		match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfPost]->(:Post)-[:hasCreatorPost]->(p2:Person)
 		where p1.id::int8 = prev and p2.id::int8 = curr
 		return count(*)
 		into l2;
 
 		select sum(cnt) into l3 from (
 		  select cnt from (
-		    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person)
+		    match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfComment]->(:"Comment")-[:hasCreatorComment]->(p2:Person)
 		    where p1.id::int8 = prev and p2.id::int8 = curr
 		    return count(*) as cnt) as l
 		  union all
 		  select cnt from (
-		    match (p1:Person)<-[:hasCreator]-(:"Comment")-[:replyOf]->(:"Comment")-[:hasCreator]->(p2:Person)
+		    match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfComment]->(:"Comment")-[:hasCreatorComment]->(p2:Person)
 		    where p1.id::int8 = curr and p2.id::int8 = prev
 			 return count(*) as cnt) as r) as uni;
 

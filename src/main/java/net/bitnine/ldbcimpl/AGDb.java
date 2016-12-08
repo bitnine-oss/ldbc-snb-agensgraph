@@ -199,19 +199,25 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(messageX:Message), " +
-                    "(messageX:Message)-[:isLocatedInMsg]->(countryX:Place) " +
-                    "WHERE person.id::int8 = ? " +
-                    "  AND person.id != friend.id " +
-                    "  AND not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryX)) " +
+            String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
+                    "WHERE " +
+                    "  person.id::int8 = ?  " +
+                    "  AND id(person) <> id(friend) " +
+                    "WITH DISTINCT friend " +
+                    "MATCH (messageX:message4), (countryX:Place) " +
+                    "WHERE messageX.\"creatorID\"::graphid = id(friend) " +
+                    "  AND messageX.\"placeID\"::graphid = id(countryX) " +
+                    "  AND not exists ((friend)-[:isLocatedIn]->(:place)-[:isPartOf]->(countryX)) " +
                     "  AND countryX.name = ? " +
                     "  AND messageX.creationDate::int8 >= ? " +
                     "  AND messageX.creationDate::int8 < ? " +
                     "WITH friend, count(DISTINCT messageX) AS xCount " +
-                    "MATCH (friend)<-[:hasCreator]-(messageY)-[:isLocatedInMsg]->(countryY:Place) " +
+                    "MATCH (messageY:message4), (countryY:Place) " +
                     "WHERE " +
-                    "  countryY.name= ? " +
-                    "  AND not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryY)) " +
+                    "  id(friend) = messageY.\"creatorID\"::graphid " +
+                    "  and id(countryY) = messageY.\"placeID\"::graphid " +
+                    "  and countryY.name= ? " +
+                    "  AND not exists ((friend)-[:isLocatedIn]->(:place)-[:isPartOf]->(countryY)) " +
                     "  AND messageY.creationDate::int8 >= ? " +
                     "  AND messageY.creationDate::int8 < ? " +
                     "WITH " +
@@ -267,29 +273,29 @@ public class AGDb extends Db {
                     "ORDER BY postCount DESC, tagName ASC " +
                     "LIMIT ?"; */
 
-            String stmt = "SELECT tagname, count(distinct postid) AS postcount FROM ( " + 
-                          "        SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " + 
-                          "        FROM " + 
-                          "        ( " + 
+            String stmt = "SELECT tagname, count(distinct postid) AS postcount FROM ( " +
+                          "        SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " +
+                          "        FROM " +
+                          "        ( " +
                           "                MATCH (person:Person)-[:KNOWS]-(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
-                          "                WHERE " + 
-                          "                person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " + 
-                          "                RETURN " + 
-                          "                post.id::int8 AS postid, tag.name AS tag " + 
-                          "        ) T1 " + 
-                          "        LEFT JOIN " + 
-                          "        ( " + 
+                          "                WHERE " +
+                          "                person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
+                          "                RETURN " +
+                          "                post.id::int8 AS postid, tag.name AS tag " +
+                          "        ) T1 " +
+                          "        LEFT JOIN " +
+                          "        ( " +
                           "                MATCH (person:Person)-[:KNOWS]-(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
-                          "                WHERE " + 
-                          "                person.id::int8 = ? AND post.creationDate::int8 < ? " + 
-                          "                RETURN " + 
-                          "                post.id::int8 AS postid, tag.name AS tag " + 
-                          "        ) T2 " + 
-                          "        ON T1.tag = T2.tag " + 
-                          "        GROUP BY T1.tag, T1.postid " + 
-                          ") A " + 
-                          "WHERE oldPostCount = 0 GROUP BY tagname " + 
-                          "ORDER BY postcount DESC, tagname ASC " + 
+                          "                WHERE " +
+                          "                person.id::int8 = ? AND post.creationDate::int8 < ? " +
+                          "                RETURN " +
+                          "                post.id::int8 AS postid, tag.name AS tag " +
+                          "        ) T2 " +
+                          "        ON T1.tag = T2.tag " +
+                          "        GROUP BY T1.tag, T1.postid " +
+                          ") A " +
+                          "WHERE oldPostCount = 0 GROUP BY tagname " +
+                          "ORDER BY postcount DESC, tagname ASC " +
                           "LIMIT ?";
 
             java.util.Date endDate = DateUtils.endDate(ldbcQuery4.startDate(), ldbcQuery4.durationDays());
@@ -723,7 +729,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "MATCH (r:Person)-[:isLocatedInPerson]->(s:Place) " +
-                    "WHERE r.id::int8 = ? " + 
+                    "WHERE r.id::int8 = ? " +
                     "RETURN " +
                     "  r.firstName AS firstName, " +
                     "  r.lastName AS lastName, " +

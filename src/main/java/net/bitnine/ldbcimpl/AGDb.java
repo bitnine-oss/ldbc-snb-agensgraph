@@ -82,8 +82,10 @@ public class AGDb extends Db {
                     "WITH friend, min(array_length(path, 1)) AS distance " +
                     "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
                     "LIMIT ? " +
-                    "MATCH (friend)-[:isLocatedInPerson]->(friendCity:Place) " +
-                    "OPTIONAL MATCH (friend)-[studyAt:studyAt]->(uni:Organization)-[:isLocatedInOrgan]->(uniCity:Place) " +
+                    "MATCH (friend), (friendCity:Place) " +
+                    "WHERE friend.place::int8 = friendCity.id::int8 " +
+                    "OPTIONAL MATCH (friend)-[studyAt:studyAt]->(uni:Organization), (uniCity:Place) " +
+                    "WHERE uni.place::int8 = uniCity.id::int8 " +
                     "WITH " +
                     "  friend, " +
                     "  jsonb_agg( " +
@@ -94,7 +96,8 @@ public class AGDb extends Db {
                     "  ) AS unis, " +
                     "  friendCity, " +
                     "  distance " +
-                    "OPTIONAL MATCH (friend)-[worksAt:workAt]->(company:Organization)-[:isLocatedInOrgan]->(companyCountry:Place) " +
+                    "OPTIONAL MATCH (friend)-[worksAt:workAt]->(company:Organization), (companyCountry:Place) " +
+                    "WHERE company.place::int8 = companyCountry.id::int8 " +
                     "WITH " +
                     "  friend, " +
                     "  jsonb_agg( " +
@@ -160,8 +163,9 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (p:Person)-[:knows]-(friend:Person)<-[:hasCreator]-(message:Message) " +
+            String stmt = "MATCH (p:Person)-[:knows]-(friend:Person), (message:Message) " +
                     "WHERE p.id::int8 = ? AND message.creationDate::int8 <= ? " +
+                    "  AND friend.id::int8 = message.creator::int8 " +
                     "RETURN " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +
@@ -204,20 +208,24 @@ public class AGDb extends Db {
                     "  person.id::int8 = ?  " +
                     "  AND id(person) <> id(friend) " +
                     "WITH DISTINCT friend " +
-                    "MATCH (messageX:message4), (countryX:Place) " +
-                    "WHERE messageX.\"creatorID\"::graphid = id(friend) " +
-                    "  AND messageX.\"placeID\"::graphid = id(countryX) " +
-                    "  AND not exists ((friend)-[:isLocatedIn]->(:place)-[:isPartOf]->(countryX)) " +
+                    "MATCH (messageX:Message), (countryX:Place) " +
+                    "WHERE messageX.creator::int8 = friend.id::int8 " +
+                    "  AND messageX.place::int8 = countryX.id::int8 " +
+                    "  AND not exists (select 1 from ldbc.place p " +
+                    "                  where (p.properties->>'id')::int8 = friend.place::int8 " +
+                    "                    and (p.properties->>'ispartof')::int8 = countryX.id::int8) " +
                     "  AND countryX.name = ? " +
                     "  AND messageX.creationDate::int8 >= ? " +
                     "  AND messageX.creationDate::int8 < ? " +
                     "WITH friend, count(DISTINCT messageX) AS xCount " +
-                    "MATCH (messageY:message4), (countryY:Place) " +
+                    "MATCH (messageY:Message), (countryY:Place) " +
                     "WHERE " +
-                    "  id(friend) = messageY.\"creatorID\"::graphid " +
-                    "  and id(countryY) = messageY.\"placeID\"::graphid " +
-                    "  and countryY.name= ? " +
-                    "  AND not exists ((friend)-[:isLocatedIn]->(:place)-[:isPartOf]->(countryY)) " +
+                    "  friend.id::int8 = messageY.creator::int8 " +
+                    "  and countryY.id::int8 = messageY.place::int8 " +
+                    "  and countryY.name = ? " +
+                    "  AND not exists (select 1 from ldbc.place p " +
+                    "                  where (p.properties->>'id')::int8 = friend.place::int8 " +
+                    "                    and (p.properties->>'ispartof')::int8 = countryY.id::int8) " +
                     "  AND messageY.creationDate::int8 >= ? " +
                     "  AND messageY.creationDate::int8 < ? " +
                     "WITH " +
@@ -277,17 +285,19 @@ public class AGDb extends Db {
                           "        SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " +
                           "        FROM " +
                           "        ( " +
-                          "                MATCH (person:Person)-[:KNOWS]-(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "                MATCH (person:Person)-[:KNOWS]-(friend:Person), (post:Post)-[:hasTagPost]->(tag:Tag) " +
                           "                WHERE " +
                           "                person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
+                          "                AND friend.id::int8 = post.creator::int8 " +
                           "                RETURN " +
                           "                post.id::int8 AS postid, tag.name AS tag " +
                           "        ) T1 " +
                           "        LEFT JOIN " +
                           "        ( " +
-                          "                MATCH (person:Person)-[:KNOWS]-(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "                MATCH (person:Person)-[:KNOWS]-(friend:Person), (post:Post)-[:hasTagPost]->(tag:Tag) " +
                           "                WHERE " +
                           "                person.id::int8 = ? AND post.creationDate::int8 < ? " +
+                          "                AND friend.id::int8 = post.creator::int8 " +
                           "                RETURN " +
                           "                post.id::int8 AS postid, tag.name AS tag " +
                           "        ) T2 " +
@@ -326,9 +336,9 @@ public class AGDb extends Db {
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
                     "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
                     "AND membership.\"joinDate\"::int8 > ? " +
-                    "WITH DISTINCT id(friend) AS friendgid, id(forum) AS forumgid, forum.id::int8 AS forumId, forum.title AS forumTitle " +
-                    "OPTIONAL MATCH (post:post4) " +
-                    "WHERE friendgid = post.\"creatorID\"::graphid and post.\"forumID\"::graphid = forumgid " +
+                    "WITH DISTINCT friend.id::int8 AS friendId, forum.id::int8 AS forumId, forum.title AS forumTitle " +
+                    "OPTIONAL MATCH (post:Post) " +
+                    "WHERE friendId = post.creator::int8 and post.forumID::int8 = forumId " +
                     "WITH forumTitle, forumId, count(post) AS postCount " +
                     "ORDER BY postCount DESC, forumId ASC " +
                     "RETURN " +
@@ -362,9 +372,9 @@ public class AGDb extends Db {
 
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
                     "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
-                    "WITH DISTINCT id(friend) AS friendgid " +
-                    "MATCH (friendPost:Post4)-[:hasTagPost]->(knownTag:Tag) " +
-                    "WHERE friendPost.\"creatorID\"::graphid = friendgid " +
+                    "WITH DISTINCT friend.id::int8 AS friendId " +
+                    "MATCH (friendPost:Post)-[:hasTagPost]->(knownTag:Tag) " +
+                    "WHERE friendPost.creator::int8 = friendId " +
                     "AND knownTag.name <> ? " +
                     "AND exists((friendPost)-[:hasTagPost]->(:Tag {'name': ?})) " +
                     "RETURN " +
@@ -395,8 +405,8 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery7 ldbcQuery7, DbConnectionState dbConnectionState, ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
-                    "WHERE person.id::int8 = ? " +
+            String stmt = "MATCH (person:Person), (message:Message)<-[l:likes]-(liker:Person) " +
+                    "WHERE person.id::int8 = ? AND person.id::int8 = message.creator::int8 " +
                     "WITH liker, message, l.\"creationDate\"::int8 AS likeTime, person " +
                     "WITH " +
                     "  liker, " +
@@ -442,8 +452,11 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (p:Person)<-[:hasCreator]-(:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(person:Person) " +
+            String stmt = "MATCH (p:Person), (m:Message), (c:\"Comment\"), (person:Person) " +
                     "WHERE p.id::int8 = ? " +
+                    "  AND p.id::int8 = m.creator::int8 " +
+                    "  AND (m.id::int8 = c.replyOfPost::int8 OR m.id::int8 = c.replyOfComment::int8) " +
+                    "  AND c.creator::int8 = person.id::int8 " +
                     "RETURN " +
                     "  person.id::int8 AS personId, " +
                     "  person.firstName AS personFirstName, " +
@@ -480,13 +493,12 @@ public class AGDb extends Db {
             String stmt = "MATCH (person:Person)-[:KNOWS*1..2]-(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "WITH DISTINCT" +
-                    "   id(friend)::graphid AS friendid, " +
                     "   friend.id::int8 AS personId, " +
                     "   friend.firstName AS personFirstName, " +
                     "   friend.lastName AS personLastName " +
-                    "MATCH (message:Message4) " +
+                    "MATCH (message:Message) " +
                     " WHERE message.creationDate::int8 < ? " +
-                    "   AND message.\"creatorID\"::graphid = friendid " +
+                    "   AND message.creator::int8 = personId " +
                     " RETURN " +
                     "   personId, personFirstName, personLastName, " +
                     "   message.id::int8 AS messageId, " +
@@ -523,8 +535,9 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*2..2]-(friend:Person)-[:isLocatedInPerson]->(city:Place) " +
+            String stmt = "MATCH (person:Person)-[:knows*2..2]-(friend:Person), (city:Place) " +
                     "WHERE person.id::int8 = ? " +
+                    "  AND friend.place::int8 = city.id::int8 " +
                     "WITH " +
                     "  friend, " +
                     "  city, " +
@@ -534,10 +547,11 @@ public class AGDb extends Db {
                     "WHERE " +
                     "  ((birthdayMonth = ? AND birthdayDay >= 21) OR " +
                     "   (birthdayMonth = (? % 12)+1 AND birthdayDay < 22)) " +
-                    "  AND friend.id != person.id " +
+                    "  AND id(friend) <> id(person) " +
                     "  AND not exists((friend)-[:knows]-(person)) " +
                     "WITH DISTINCT friend, city, person " +
-                    "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post:Post) " +
+                    "OPTIONAL MATCH (post:Post) " +
+                    "WHERE friend.id::int8 = post.creator::int8 " +
                     "WITH friend, city, array_remove(array_agg(post), NULL) AS posts, person " +
                     "WITH  " +
                     "  friend, " +
@@ -580,12 +594,12 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            client.execute("set enable_seqscan = off");
             String stmt = "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
-                    "WHERE person.id::int8 = ? AND person.id != friend.id " +
+                    "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
                     "WITH DISTINCT friend " +
-                    "MATCH (friend)-[worksAt:workAt]->(company:Organization)-[:isLocatedInOrgan]->(:Place {'name': ?}) " +
-                    "WHERE worksAt.\"workFrom\"::int < ? " +
+                    "MATCH (friend)-[worksAt:workAt]->(company:Organization), (place:Place {'name': ?}) " +
+                    "WHERE worksAt.\"workFrom\"::int < ?" +
+                    "  AND company.place::int8 = place.id::int8 " +
                     "RETURN " +
                     "  friend.id::int8 AS friendId, " +
                     "  friend.firstName AS friendFirstName, " +
@@ -604,10 +618,8 @@ public class AGDb extends Db {
                             rs.getString(4), rs.getInt(5)));
                 }
             } catch (SQLException e) {
-                client.execute("set enable_seqscan = on");
                 throw new AGClientException(e);
             }
-            client.execute("set enable_seqscan = on");
 
             resultReporter.report(0, resultList, ldbcQuery11);
         }
@@ -625,9 +637,11 @@ public class AGDb extends Db {
             String stmt = "MATCH (person:Person)-[:knows]-(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "OPTIONAL MATCH " +
-                    "  (friend)<-[:hasCreatorComment]-(c:\"Comment\")-[:replyOfPost]->(:Post)-[:hasTagPost]->(tag:Tag), " +
+                    "  (c:\"Comment\"), (post:Post)-[:hasTagPost]->(tag:Tag), " +
                     "  (tag:Tag)-[:hasType]->(tagClass:TagClass)-[:isSubclassOf*0..]->(baseTagClass:TagClass) " +
-                    "WHERE tagClass.name = ? OR baseTagClass.name = ? " +
+                    "WHERE (tagClass.name = ? OR baseTagClass.name = ?) " +
+                    "  AND friend.id::int8 = c.creator::int8 " +
+                    "  AND c.replyOfPost::int8 = post.id::int8 " +
                     "RETURN " +
                     "  friend.id::int8 AS friendId, " +
                     "  friend.firstName AS friendFirstName, " +
@@ -728,7 +742,7 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (r:Person)-[:isLocatedInPerson]->(s:Place) " +
+            String stmt = "MATCH (r:Person) " +
                     "WHERE r.id::int8 = ? " +
                     "RETURN " +
                     "  r.firstName AS firstName, " +
@@ -736,7 +750,7 @@ public class AGDb extends Db {
                     "  r.birthday::int8 AS birthday, " +
                     "  r.locationIp AS locationIP, " +
                     "  r.browserUsed AS browserUsed, " +
-                    "  s.id::int8 AS placeId, " +
+                    "  r.place::int8 AS placeId, " +
                     "  r.gender AS gender, " +
                     "  r.creationDate::int8 AS creationDate";
 
@@ -768,10 +782,13 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)<-[:hasCreator]-(m:Message) " +
+            /*
+            String stmt = "MATCH (person:Person), (m:Message) " +
                     "MATCH (m)-[:replyOf*0..]->(p:Post) " +
-                    "MATCH (p)-[:hasCreatorPost]->(c:Person) " +
+                    "MATCH (p), (c:Person) " +
                     "WHERE person.id::int8 = ? " +
+                    "  AND person.id::int8 = m.creator::int8 " +
+                    "  AND p.creator::int8 = c.id::int8 " +
                     "RETURN " +
                     "  m.id::int8 as messageId, " +
                     "  CASE m.content is not null " +
@@ -785,8 +802,56 @@ public class AGDb extends Db {
                     "  c.lastName as originalPostAuthorLastName " +
                     "ORDER BY messageCreationDate DESC " +
                     "LIMIT ?";
+            */
+            client.execute("set enable_hashjoin = off");
+            client.execute("set enable_mergejoin = off");
+            String stmt ="WITH RECURSIVE replyof (id, replyOfPost, replyOfComment, content, imageFile, creationDate) AS ( " +
+                    "		SELECT * " +
+                    "		FROM ( " +
+                    "           SELECT (p.properties->>'id')::int8," +
+                    "                  (p.properties->>'id')::int8, NULL::int8, " +
+                    "                  (p.properties->>'content'), " +
+                    "                  (p.properties->>'imagefile'), " +
+                    "                  (p.properties->>'creationdate')::int8 " +
+                    "           FROM ldbc.post p " +
+                    "           WHERE (p.properties #>> ARRAY['creator'::text])::int8 = ? " +
+                    "			UNION ALL " +
+                    "           SELECT (c.properties->>'id')::int8, " +
+                    "                  (c.properties->>'replyofpost')::int8," +
+                    "                  (c.properties->>'replyofcomment')::int8, " +
+                    "                  (c.properties->>'content'), " +
+                    "                  (c.properties->>'imagefile'), " +
+                    "                  (c.properties->>'creationdate')::int8 " +
+                    "			FROM ldbc.\"Comment\" c " +
+                    "			WHERE (c.properties #>> ARRAY['creator'::text])::int8 = ? " +
+                    "		) m " +
+                    "		UNION ALL " +
+                    "		SELECT r.id, (c.properties->>'replyofpost')::int8, " +
+                    "              (c.properties->>'replyofcomment')::int8, " +
+                    "              r.content, r.imageFile, r.creationDate " +
+                    "		FROM replyof r, ldbc.\"Comment\" c " +
+                    "		WHERE r.replyOfComment = (c.properties #>> '{id}'::text[])::int8 " +
+                    "		  AND r.replyOfComment IS NOT NULL " +
+                    ") " +
+                    "SELECT " +
+                    "  m.id as messageId, " +
+                    "  CASE m.content is not null " +
+                    "    WHEN true THEN m.content " +
+                    "    ELSE m.imageFile " +
+                    "  END AS messageContent, " +
+                    "  m.creationDate::int8 AS messageCreationDate, " +
+                    "  (p.properties->>'id')::int8 AS originalPostId, " +
+                    "  (creator.properties->>'id')::int8 AS originalPostAuthorId, " +
+                    "  (creator.properties->>'firstname') as originalPostAuthorFirstName, " +
+                    "  (creator.properties->>'lastname') as originalPostAuthorLastName " +
+                    "FROM replyof m, ldbc.post p, ldbc.person creator " +
+                    "WHERE m.replyOfPost = (p.properties #>> '{id}'::text[])::int8 " +
+                    "  AND (p.properties->>'creator')::int8 = (creator.properties #>> '{id}'::text[])::int8 " +
+                    "ORDER BY messageCreationDate DESC " +
+                    "LIMIT ?";
 
             ResultSet rs = client.executeQuery(stmt,
+                    ldbcShortQuery2PersonPosts.personId(),
                     ldbcShortQuery2PersonPosts.personId(),
                     ldbcShortQuery2PersonPosts.limit());
 
@@ -801,6 +866,9 @@ public class AGDb extends Db {
             } catch (SQLException e) {
                 throw new AGClientException(e);
             }
+
+            client.execute("set enable_hashjoin = on");
+            client.execute("set enable_mergejoin = on");
 
             resultReporter.report(0, resultList, ldbcShortQuery2PersonPosts);
         }
@@ -884,8 +952,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message)-[:hasCreator]->(p:Person) " +
-                    "WHERE m.id::int8 = ? " +
+            String stmt = "MATCH (m:Message), (p:Person) " +
+                    "WHERE m.id::int8 = ? AND m.creator::int8 = p.id::int8 " +
                     "RETURN " +
                     "  p.id::int8 AS personId, " +
                     "  p.firstName AS firstName, " +
@@ -917,15 +985,48 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message)-[:replyOf*0..]->(p:Post)<-[:containerOf]-(f:Forum)-[:hasModerator]->(mod:Person) " +
-                    "WHERE m.id::int8 = ? " +
-                    "RETURN " +
-                    "  f.id::int8 AS forumId, " +
-                    "  f.title AS forumTitle, " +
-                    "  mod.id::int8 AS moderatorId, " +
-                    "  mod.firstName AS moderatorFirstName, " +
-                    "  mod.lastName AS moderatorLastName";
-            ResultSet rs = client.executeQuery(stmt, ldbcShortQuery6MessageForum.messageId());
+            String stmt = "WITH RECURSIVE replyof (id, replyOfPost, replyOfComment, content, imageFile, creationDate) AS ( " +
+                    "		SELECT * " +
+                    "		FROM ( " +
+                    "           SELECT (p.properties->>'id')::int8," +
+                    "                  (p.properties->>'id')::int8, NULL::int8, " +
+                    "                  (p.properties->>'content'), " +
+                    "                  (p.properties->>'imagefile'), " +
+                    "                  (p.properties->>'creationdate')::int8 " +
+                    "           FROM ldbc.post p " +
+                    "           WHERE (p.properties #>> '{id}'::text[])::int8 = ? " +
+                    "			UNION ALL " +
+                    "           SELECT (c.properties->>'id')::int8, " +
+                    "                  (c.properties->>'replyofpost')::int8," +
+                    "                  (c.properties->>'replyofcomment')::int8, " +
+                    "                  (c.properties->>'content'), " +
+                    "                  (c.properties->>'imagefile'), " +
+                    "                  (c.properties->>'creationdate')::int8 " +
+                    "			FROM ldbc.\"Comment\" c " +
+                    "			WHERE (c.properties #>>'{id}'::text[])::int8 = ? " +
+                    "		) m " +
+                    "		UNION ALL " +
+                    "		SELECT r.id, (c.properties->>'replyofpost')::int8, " +
+                    "              (c.properties->>'replyofcomment')::int8, " +
+                    "              r.content, r.imageFile, r.creationDate " +
+                    "		FROM replyof r, ldbc.\"Comment\" c " +
+                    "		WHERE r.replyOfComment = (c.properties #>>'{id}'::text[])::int8 " +
+                    "		  AND r.replyOfComment IS NOT NULL " +
+                    ") " +
+                    "SELECT " +
+                    "  (f.properties->>'id')::int8 AS forumId, " +
+                    "  (f.properties->>'title') AS forumTitle, " +
+                    "  (mod.properties->>'id')::int8 AS moderatorId, " +
+                    "  (mod.properties->>'firstname') AS moderatorFirstName, " +
+                    "  (mod.properties->>'lastname') AS moderatorLastName " +
+                    "FROM replyof m, ldbc.post p, ldbc.forum f, ldbc.person mod " +
+                    "WHERE m.replyOfPost = (p.properties #>> '{id}'::text[])::int8 " +
+                    "  AND (p.properties->>'forumid')::int8 = (f.properties #>> '{id}'::text[])::int8 " +
+                    "  AND (f.properties->>'moderator')::int8 = (mod.properties #>> '{id}'::text[])::int8 ";
+
+            ResultSet rs = client.executeQuery(stmt,
+                    ldbcShortQuery6MessageForum.messageId(),
+                    ldbcShortQuery6MessageForum.messageId());
 
             LdbcShortQuery6MessageForumResult result = null;
             try {
@@ -952,9 +1053,12 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(p:Person) " +
+            String stmt = "MATCH (m:Message), (c:\"Comment\"), (p:Person) " +
                     "WHERE m.id::int8 = ? " +
-                    "OPTIONAL MATCH (m)-[:hasCreator]->(a:Person)-[r:knows]-(p) " +
+                    "  AND (m.id::int8 = c.replyOfPost::int8 OR m.id::int8 = c.replyOfComment::int8) " +
+                    "  AND (c.creator::int8 = p.id::int8) " +
+                    "OPTIONAL MATCH (m), (a:Person)-[r:knows]-(p) " +
+                    "WHERE m.creator::int8 = a.id::int8 " +
                     "RETURN " +
                     "  c.id::int8 AS commentId, " +
                     "  c.content AS commentContent, " +
@@ -1006,22 +1110,16 @@ public class AGDb extends Db {
             prop.put("browserused", ldbcUpdate1AddPerson.browserUsed());
             prop.put("speaks", JsonArray.create(ldbcUpdate1AddPerson.languages()));
             prop.put("email", JsonArray.create(ldbcUpdate1AddPerson.emails()));
+            prop.put("place", ldbcUpdate1AddPerson.cityId());
             client.execute(stmt, prop);
 
-            stmt =  "MATCH (p:Person), (c:Place) " +
-                    "WHERE p.id::int8 = ? AND c.id::int8 = ? " +
-                    "OPTIONAL MATCH (t:Tag) " +
-                    "WHERE ? @> array[t.id::int8] " +
-                    "WITH p, c, array_remove(array_agg(t), NULL) AS tags " +
-                    "CREATE (p)-[:isLocatedInPerson]->(c) " +
-                    "WITH p, unnest(tags) AS tag " +
-                    "CREATE (p)-[:hasInterest]->(tag)";
+            stmt =  "MATCH (p:Person), (t:Tag) " +
+                    "WHERE p.id::int8 = ?" +
+                    "  AND ? @> array[t.id::int8] " +
+                    "CREATE (p)-[:hasInterest]->(t)";
 
             Array tagIds = client.createArrayOfLong("int8", ldbcUpdate1AddPerson.tagIds());
-            client.execute(stmt,
-                    ldbcUpdate1AddPerson.personId(),
-                    ldbcUpdate1AddPerson.cityId(),
-                    tagIds);
+            client.execute(stmt, ldbcUpdate1AddPerson.personId(), tagIds);
 
             if (ldbcUpdate1AddPerson.studyAt().size() > 0) {
                 StringBuilder matchBldr = new StringBuilder();
@@ -1140,22 +1238,19 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "CREATE (f:Forum {id: ?, title: ?, creationDate: ?})";
+            String stmt = "CREATE (f:Forum {id: ?, title: ?, creationDate: ?, moderator: ?})";
             client.execute(stmt,
                     ldbcUpdate4AddForum.forumId(),
                     ldbcUpdate4AddForum.forumTitle(),
-                    ldbcUpdate4AddForum.creationDate());
+                    ldbcUpdate4AddForum.creationDate(),
+                    ldbcUpdate4AddForum.moderatorPersonId());
 
-            stmt = "MATCH (f:Forum), (p:Person) " +
-                    "WHERE f.id::int8 = ? AND p.id::int8 = ? " +
-                    "OPTIONAL MATCH (t:Tag) " +
-                    "WHERE ? @> array[t.id::int8] " +
-                    "WITH f, p, array_remove(array_agg(t), NULL) as tags " +
-                    "CREATE (f)-[:hasModerator]->(p) " +
-                    "WITH f, unnest(tags) AS tag " +
-                    "CREATE (f)-[:hasTagForum]->(tag)";
+            stmt = "MATCH (f:Forum), (t:Tag) " +
+                    "WHERE f.id::int8 = ? " +
+                    "  AND ? @> array[t.id::int8] " +
+                    "CREATE (f)-[:hasTagForum]->(t)";
             Array tagIds = client.createArrayOfLong("int8", ldbcUpdate4AddForum.tagIds());
-            client.execute(stmt, ldbcUpdate4AddForum.forumId(), ldbcUpdate4AddForum.moderatorPersonId(), tagIds);
+            client.execute(stmt, ldbcUpdate4AddForum.forumId(), tagIds);
 
             client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate4AddForum);
@@ -1206,21 +1301,17 @@ public class AGDb extends Db {
             } else {
                 prop.put("content", ldbcUpdate6AddPost.content());
             }
+            prop.put("creator", ldbcUpdate6AddPost.authorPersonId());
+            prop.put("forumid", ldbcUpdate6AddPost.forumId());
+            prop.put("place", ldbcUpdate6AddPost.countryId());
             client.execute(stmt, prop);
 
-            stmt = "MATCH (m:Post), (p:Person), (f:Forum), (c:Place) " +
-                    "WHERE m.id::int8 = ? AND p.id::int8 = ? AND f.id::int8 = ? AND c.id::int8 = ? " +
-                    "OPTIONAL MATCH (t:Tag) " +
-                    "WHERE ? @> array[t.id::int8] " +
-                    "WITH m, p, f, c, array_remove(array_agg(t), NULL) as tagSet " +
-                    "CREATE (m)-[:hasCreatorPost]->(p), " +
-                    "       (m)<-[:containerOf]-(f), " +
-                    "       (m)-[:isLocatedInPost]->(c) " +
-                    "WITH m, unnest(tagSet) AS tag " +
-                    "CREATE (m)-[:hasTagPost]->(tag)";
+            stmt =  "MATCH (m:Post), (t:Tag) " +
+                    "WHERE m.id::int8 = ? " +
+                    "  AND ? @> array[t.id::int8] " +
+                    "CREATE (m)-[:hasTagPost]->(t)";
             Array tagIds = client.createArrayOfLong("int8", ldbcUpdate6AddPost.tagIds());
-            client.execute(stmt, ldbcUpdate6AddPost.postId(), ldbcUpdate6AddPost.authorPersonId(),
-                    ldbcUpdate6AddPost.forumId(), ldbcUpdate6AddPost.countryId(), tagIds);
+            client.execute(stmt, ldbcUpdate6AddPost.postId(), tagIds);
 
             client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate6AddPost);
@@ -1244,27 +1335,21 @@ public class AGDb extends Db {
             prop.put("browserused", ldbcUpdate7AddComment.browserUsed());
             prop.put("content", ldbcUpdate7AddComment.content());
             prop.put("length", ldbcUpdate7AddComment.length());
+            prop.put("creator", ldbcUpdate7AddComment.authorPersonId());
+            prop.put("place", ldbcUpdate7AddComment.countryId());
+            if (ldbcUpdate7AddComment.replyToCommentId() != -1) {
+                prop.put("replyofcomment", ldbcUpdate7AddComment.replyToCommentId());
+            } else {
+                prop.put("replyofpost", ldbcUpdate7AddComment.replyToPostId());
+            }
             client.execute(stmt, prop);
 
-            stmt = "MATCH (m:\"Comment\"), (p:Person), (r:Message), (c:Place) " +
-                    "WHERE m.id::int8 = ? AND p.id::int8 = ? AND r.id::int8 = ? AND c.id::int8 = ? " +
-                    "OPTIONAL MATCH (t:Tag) " +
-                    "WHERE ? @> array[t.id::int8] " +
-                    "WITH m, p, r, c, array_remove(array_agg(t), NULL) as tagSet " +
-                    "CREATE (m)-[:hasCreatorComment]->(p), " +
-                    "       (m)-[:replyOf]->(r), " +
-                    "       (m)-[:isLocatedInComment]->(c) " +
-                    "WITH m, unnest(tagSet) AS tag " +
-                    "CREATE (m)-[:hasTagComment]->(tag)";
-            Long replyOfId;
-            if (ldbcUpdate7AddComment.replyToCommentId() != -1) {
-                replyOfId = ldbcUpdate7AddComment.replyToCommentId();
-            } else {
-                replyOfId = ldbcUpdate7AddComment.replyToPostId();
-            }
+            stmt = "MATCH (m:\"Comment\"), (t:Tag) " +
+                    "WHERE m.id::int8 = ? " +
+                    "  AND ? @> array[t.id::int8] " +
+                    "CREATE (m)-[:hasTagComment]->(t)";
             Array tagIds = client.createArrayOfLong("int8", ldbcUpdate7AddComment.tagIds());
-            client.execute(stmt, ldbcUpdate7AddComment.commentId(), ldbcUpdate7AddComment.authorPersonId(),
-                    replyOfId, ldbcUpdate7AddComment.countryId(), tagIds);
+            client.execute(stmt, ldbcUpdate7AddComment.commentId(), tagIds);
 
             client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate7AddComment);

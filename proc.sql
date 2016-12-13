@@ -76,26 +76,30 @@ begin
 		prev := node_ids[i];
 		curr := node_ids[i+1];
 
-		match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfPost]->(:Post)-[:hasCreatorPost]->(p2:Person)
-		where p1.id::int8 = curr and p2.id::int8 = prev
+		match (c:"Comment"), (p:Post)
+		where c.creator::int8 = curr and p.creator::int8 = prev
+		  and c.replyOfPost::int8 = p.id::int8
 		return count(*)
 		into l1;
 
-		match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfPost]->(:Post)-[:hasCreatorPost]->(p2:Person)
-		where p1.id::int8 = prev and p2.id::int8 = curr
+		match (c:"Comment"), (p:Post)
+		where c.creator::int8 = prev and p.creator::int8 = curr
+		  and c.replyOfPost::int8 = p.id::Int8
 		return count(*)
 		into l2;
 
 		select sum(cnt) into l3 from (
 		  select cnt from (
-		    match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfComment]->(:"Comment")-[:hasCreatorComment]->(p2:Person)
-		    where p1.id::int8 = prev and p2.id::int8 = curr
+		    match (c1:"Comment"), (c2:"Comment")
+		    where c1.creator::int8 = prev and c2.creator::int8 = curr
+			  and c1.replyOfComment::int8 = c2.id::int8
 		    return count(*) as cnt) as l
 		  union all
 		  select cnt from (
-		    match (p1:Person)<-[:hasCreatorComment]-(:"Comment")-[:replyOfComment]->(:"Comment")-[:hasCreatorComment]->(p2:Person)
-		    where p1.id::int8 = curr and p2.id::int8 = prev
-			 return count(*) as cnt) as r) as uni;
+		    match (c1:"Comment"), (c2:"Comment")
+		    where c1.creator::int8 = curr and c2.creator::int8 = prev
+			  and c1.replyOfComment::int8 = c2.id::int8
+			return count(*) as cnt) as r) as uni;
 
 		weight := weight + l1 * 1.0 + l2 * 1.0 + l3 * 0.5;
 	end loop;

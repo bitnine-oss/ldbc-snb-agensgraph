@@ -19,74 +19,45 @@ create vlabel Tag;
 create vlabel TagClass;
 
 -- Make Edge Labels
-create elabel containerOf;
-create elabel hasCreator;
-create elabel hasCreatorPost inherits (hasCreator);
-create elabel hasCreatorComment inherits (hasCreator);
-create elabel hasInterest;
 create elabel hasMember;
-create elabel hasModerator;
 create elabel hasTag;
 create elabel hasTagPost inherits (hasTag);
 create elabel hasTagComment inherits (hasTag);
 create elabel hasTagForum inherits (hasTag);
-create elabel hasType;
-create elabel isLocatedIn;
-create elabel isLocatedInOrgan inherits (isLocatedIn);
-create elabel isLocatedInPerson inherits (isLocatedIn);
-create elabel isLocatedInMsg inherits (isLocatedIn);
-create elabel isLocatedInPost inherits (isLocatedInMsg);
-create elabel isLocatedInComment inherits (isLocatedInMsg);
-create elabel isPartOf;
-create elabel isSubclassOf;
+create elabel hasInterest;
 create elabel knows;
 create elabel likes;
 create elabel likesPost inherits (likes);
 create elabel likesComment inherits (likes);
-create elabel replyOf;
-create elabel replyOfPost inherits (replyOf);
-create elabel replyOfComment inherits (replyOf);
 create elabel studyAt;
 create elabel workAt;
+create elabel hasType;
+create elabel isSubclassOf;
 
 -- Make Unlogged
-alter vlabel forum set unlogged;
-alter vlabel message set unlogged;
-alter vlabel post set unlogged;
+alter vlabel Forum set unlogged;
+alter vlabel Message set unlogged;
+alter vlabel Post set unlogged;
 alter vlabel "Comment" set unlogged;
 alter vlabel Organization set unlogged;
 alter vlabel Person set unlogged;
 alter vlabel Place set unlogged;
 alter vlabel Tag set unlogged;
 alter vlabel TagClass set unlogged;
-alter elabel containerOf set unlogged;
-alter elabel hasCreator set unlogged;
-alter elabel hasCreatorPost set unlogged;
-alter elabel hasCreatorComment set unlogged;
-alter elabel hasInterest set unlogged;
 alter elabel hasMember set unlogged;
-alter elabel hasModerator set unlogged;
 alter elabel hasTag set unlogged;
 alter elabel hasTagPost set unlogged;
 alter elabel hasTagComment set unlogged;
 alter elabel hasTagForum set unlogged;
-alter elabel hasType set unlogged;
-alter elabel isLocatedIn set unlogged;
-alter elabel isLocatedInOrgan set unlogged;
-alter elabel isLocatedInPost set unlogged;
-alter elabel isLocatedInComment set unlogged;
-alter elabel isLocatedInPerson set unlogged;
-alter elabel isPartOf set unlogged;
-alter elabel isSubclassOf set unlogged;
+alter elabel hasInterest set unlogged;
 alter elabel knows set unlogged;
 alter elabel likes set unlogged;
 alter elabel likesPost set unlogged;
 alter elabel likesComment set unlogged;
-alter elabel replyOf set unlogged;
-alter elabel replyOfPost set unlogged;
-alter elabel replyOfComment set unlogged;
 alter elabel studyAt set unlogged;
 alter elabel workAt set unlogged;
+alter elabel hasType set unlogged;
+alter elabel isSubclassOf set unlogged;
 
 -- Drop Indexes
 drop constraint Forum_pkey on Forum;
@@ -109,121 +80,65 @@ drop index ldbc.place_properties_idx;
 drop index ldbc.tag_properties_idx;
 drop index ldbc.tagclass_properties_idx;
 
-drop index ldbc.containerOf_start_idx;
-drop index ldbc.hasCreator_start_idx;
-drop index ldbc.hasCreatorPost_start_idx;
-drop index ldbc.hasCreatorComment_start_idx;
-drop index ldbc.hasInterest_start_idx;
 drop index ldbc.hasMember_start_idx;
-drop index ldbc.hasModerator_start_idx;
 drop index ldbc.hasTag_start_idx;
 drop index ldbc.hasTagPost_start_idx;
 drop index ldbc.hasTagComment_start_idx;
 drop index ldbc.hasTagForum_start_idx;
-drop index ldbc.hasType_start_idx;
-drop index ldbc.isLocatedIn_start_idx;
-drop index ldbc.isLocatedInOrgan_start_idx;
-drop index ldbc.isLocatedInPost_start_idx;
-drop index ldbc.isLocatedInComment_start_idx;
-drop index ldbc.isLocatedInPerson_start_idx;
-drop index ldbc.isPartOf_start_idx;
-drop index ldbc.isSubclassOf_start_idx;
+drop index ldbc.hasInterest_start_idx;
 drop index ldbc.knows_start_idx;
 drop index ldbc.likes_start_idx;
 drop index ldbc.likesPost_start_idx;
 drop index ldbc.likesComment_start_idx;
-drop index ldbc.replyOf_start_idx;
-drop index ldbc.replyOfPost_start_idx;
-drop index ldbc.replyOfComment_start_idx;
 drop index ldbc.studyAt_start_idx;
 drop index ldbc.workAt_start_idx;
+drop index ldbc.hasType_start_idx;
+drop index ldbc.isSubclassOf_start_idx;
 
-drop index ldbc.containerOf_end_idx;
-drop index ldbc.hasCreator_end_idx;
-drop index ldbc.hasCreatorPost_end_idx;
-drop index ldbc.hasCreatorComment_end_idx;
-drop index ldbc.hasInterest_end_idx;
 drop index ldbc.hasMember_end_idx;
-drop index ldbc.hasModerator_end_idx;
 drop index ldbc.hasTag_end_idx;
 drop index ldbc.hasTagPost_end_idx;
 drop index ldbc.hasTagComment_end_idx;
 drop index ldbc.hasTagForum_end_idx;
-drop index ldbc.hasType_end_idx;
-drop index ldbc.isLocatedIn_end_idx;
-drop index ldbc.isLocatedInOrgan_end_idx;
-drop index ldbc.isLocatedInPost_end_idx;
-drop index ldbc.isLocatedInComment_end_idx;
-drop index ldbc.isLocatedInPerson_end_idx;
-drop index ldbc.isPartOf_end_idx;
-drop index ldbc.isSubclassOf_end_idx;
+drop index ldbc.hasInterest_end_idx;
 drop index ldbc.knows_end_idx;
 drop index ldbc.likes_end_idx;
 drop index ldbc.likesPost_end_idx;
 drop index ldbc.likesComment_end_idx;
-drop index ldbc.replyOf_end_idx;
-drop index ldbc.replyOfPost_end_idx;
-drop index ldbc.replyOfComment_end_idx;
 drop index ldbc.studyAt_end_idx;
 drop index ldbc.workAt_end_idx;
+drop index ldbc.hasType_end_idx;
+drop index ldbc.isSubclassOf_end_idx;
 
-drop index ldbc.containerOf_id_idx;
-drop index ldbc.hasCreator_id_idx;
-drop index ldbc.hasCreatorPost_id_idx;
-drop index ldbc.hasCreatorComment_id_idx;
-drop index ldbc.hasInterest_id_idx;
 drop index ldbc.hasMember_id_idx;
-drop index ldbc.hasModerator_id_idx;
 drop index ldbc.hasTag_id_idx;
 drop index ldbc.hasTagPost_id_idx;
 drop index ldbc.hasTagComment_id_idx;
 drop index ldbc.hasTagForum_id_idx;
-drop index ldbc.hasType_id_idx;
-drop index ldbc.isLocatedIn_id_idx;
-drop index ldbc.isLocatedInOrgan_id_idx;
-drop index ldbc.isLocatedInPost_id_idx;
-drop index ldbc.isLocatedInComment_id_idx;
-drop index ldbc.isLocatedInPerson_id_idx;
-drop index ldbc.isPartOf_id_idx;
-drop index ldbc.isSubclassOf_id_idx;
+drop index ldbc.hasInterest_id_idx;
 drop index ldbc.knows_id_idx;
 drop index ldbc.likes_id_idx;
 drop index ldbc.likesPost_id_idx;
 drop index ldbc.likesComment_id_idx;
-drop index ldbc.replyOf_id_idx;
-drop index ldbc.replyOfPost_id_idx;
-drop index ldbc.replyOfComment_id_idx;
 drop index ldbc.studyAt_id_idx;
 drop index ldbc.workAt_id_idx;
+drop index ldbc.hasType_id_idx;
+drop index ldbc.isSubclassOf_id_idx;
 
-drop index ldbc.containerOf_properties_idx;
-drop index ldbc.hasCreator_properties_idx;
-drop index ldbc.hasCreatorPost_properties_idx;
-drop index ldbc.hasCreatorComment_properties_idx;
-drop index ldbc.hasInterest_properties_idx;
 drop index ldbc.hasMember_properties_idx;
-drop index ldbc.hasModerator_properties_idx;
 drop index ldbc.hasTag_properties_idx;
 drop index ldbc.hasTagPost_properties_idx;
 drop index ldbc.hasTagComment_properties_idx;
 drop index ldbc.hasTagForum_properties_idx;
-drop index ldbc.hasType_properties_idx;
-drop index ldbc.isLocatedIn_properties_idx;
-drop index ldbc.isLocatedInOrgan_properties_idx;
-drop index ldbc.isLocatedInPost_properties_idx;
-drop index ldbc.isLocatedInComment_properties_idx;
-drop index ldbc.isLocatedInPerson_properties_idx;
-drop index ldbc.isPartOf_properties_idx;
-drop index ldbc.isSubclassOf_properties_idx;
+drop index ldbc.hasInterest_properties_idx;
 drop index ldbc.knows_properties_idx;
 drop index ldbc.likes_properties_idx;
 drop index ldbc.likesPost_properties_idx;
 drop index ldbc.likesComment_properties_idx;
-drop index ldbc.replyOf_properties_idx;
-drop index ldbc.replyOfPost_properties_idx;
-drop index ldbc.replyOfComment_properties_idx;
 drop index ldbc.studyAt_properties_idx;
 drop index ldbc.workAt_properties_idx;
+drop index ldbc.hasType_properties_idx;
+drop index ldbc.isSubclassOf_properties_idx;
 
 -- Forum
 \set file_name :source_path/forum_0_0.csv
@@ -234,7 +149,8 @@ create foreign table fdwForum
 	(
 		id int8, 
 		title varchar(256), 
-		creationDate int8
+		creationDate int8,
+		moderator int8
 	)
 	server graph_import
 	options 
@@ -264,7 +180,10 @@ create foreign table fdwPost
 		browserUsed varchar(80),
 		lanaguage varchar(80),
 		content text,
-		length int4
+		length int4,
+		creator int8,
+		forumID int8,
+		place int8
 	)
 	server graph_import
 	options 
@@ -290,7 +209,11 @@ create foreign table fdwComment
 		locationIP varchar(80),
 		browserUsed varchar(80),
 		content varchar(2000),
-		length int4
+		length int4,
+		creator int8,
+		place int8,
+		replyOfPost int8,
+		replyOfComment int8
 	)
 	server graph_import
 	options 
@@ -314,7 +237,8 @@ create foreign table fdwOrganization
 		id int8, 
 		type varchar(80),
 		name varchar(200),
-		url varchar(200)
+		url varchar(200),
+		place int8
 	)
 	server graph_import
 	options 
@@ -344,7 +268,8 @@ create foreign table fdwPerson
 	birthday int8,
 	creationDate int8,
 	locationIP varchar(80),
-	browserUsed varchar(80)
+	browserUsed varchar(80),
+	place int8
 )
 server graph_import
 options 
@@ -417,7 +342,8 @@ create foreign table fdwPlace
 		id int8, 
 		name varchar(200),
 		url varchar(200),
-		type varchar(80)
+		type varchar(80),
+		isPartOf int8
 	)
 	server graph_import
 	options 
@@ -511,101 +437,6 @@ analyze ldbc.tag;
 analyze ldbc.tagclass;
 
 -- Edge
---- containerOf
-\set file_name :source_path/forum_containerOf_post_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwContainerOf;
-create foreign table fdwContainerOf 
-	(
-		forumId int8, 
-		postId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwContainerOf as row
-match (r:Forum), (s:Post)
-where (r).id::int8 = (row).forumId and (s).id::int8 = (row).postId
-create (r)-[:containerOf]->(s);
-
---- hasCreator (for Post)
-\set file_name :source_path/post_hasCreator_person_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPostHasCreator;
-create foreign table fdwPostHasCreator
-	(
-		postId int8, 
-		personId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwPostHasCreator as row
-match (r:Post), (s:Person)
-where (r).id::int8 = (row).postId and (s).id::int8 = (row).personId
-create (r)-[:hasCreatorPost]->(s);
-
---- hasCreator (for comment)
-\set file_name :source_path/comment_hasCreator_person_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwCommentHasCreator;
-create foreign table fdwCommentHasCreator
-	(
-		commentId int8, 
-		personId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwCommentHasCreator as row
-match (r:"Comment"), (s:Person)
-where (r).id::int8 = (row).commentId and (s).id::int8 = (row).personId
-create (r)-[:hasCreatorComment]->(s);
-
---- hasInterest
-\set file_name :source_path/person_hasInterest_tag_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwHasInterest;
-create foreign table fdwHasInterest
-	(
-		personId int8, 
-		tagId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwHasInterest as row
-match (r:Person), (s:Tag)
-where (r).id::int8 = (row).personId and (s).id::int8 = (row).tagId
-create (r)-[:hasInterest]->(s);
 
 -- hasMember
 \set file_name :source_path/forum_hasMember_person_0_0.csv
@@ -631,30 +462,6 @@ load from fdwHasMember as row
 match (r:Forum), (s:Person)
 where (r).id::int8 = (row).forumId and (s).id::int8 = (row).personId
 create (r)-[:hasMember {'joinDate': (row).joinDate}]->(s);
-
---- hasModerator
-\set file_name :source_path/forum_hasModerator_person_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwHasModerator;
-create foreign table fdwHasModerator
-	(
-		forumId int8, 
-		personId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwHasModerator as row
-match (r:Forum), (s:Person)
-where (r).id::int8 = (row).forumId and (s).id::int8 = (row).personId
-create (r)-[:hasModerator]->(s);
 
 --- hasTag (post)
 \set file_name :source_path/post_hasTag_tag_0_0.csv
@@ -728,111 +535,15 @@ match (r:Forum), (s:Tag)
 where (r).id::int8 = (row).forumId and (s).id::int8 = (row).tagId
 create (r)-[:hasTagForum]->(s);
 
---- hasType
-\set file_name :source_path/tag_hasType_tagclass_0_0.csv
+--- hasInterest
+\set file_name :source_path/person_hasInterest_tag_0_0.csv
 \echo Start Loading :file_name
 
-drop foreign table fdwHasType;
-create foreign table fdwHasType
-	(
-		tagId int8, 
-		tagclassId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwHasType as row
-match (r:Tag), (s:TagClass)
-where (r).id::int8 = (row).tagId and (s).id::int8 = (row).tagclassId
-create (r)-[:hasType]->(s);
-
---- isLocatedIn (organisation)
-\set file_name :source_path/organisation_isLocatedIn_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwOrganIsLocatedIn;
-create foreign table fdwOrganIsLocatedIn
-	(
-		organId int8, 
-		placeId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwOrganIsLocatedIn as row
-match (r:Organization), (s:Place)
-where (r).id::int8 = (row).organId and (s).id::int8 = (row).placeId
-create (r)-[:isLocatedInOrgan]->(s);
-
---- isLocatedIn (post)
-\set file_name :source_path/post_isLocatedIn_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPostIsLocatedIn;
-create foreign table fdwPostIsLocatedIn
-	(
-		postId int8, 
-		placeId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwPostIsLocatedIn as row
-match (r:Post), (s:Place)
-where (r).id::int8 = (row).postId and (s).id::int8 = (row).placeId
-create (r)-[:isLocatedInPost]->(s);
-
---- isLocatedIn (comment)
-\set file_name :source_path/comment_isLocatedIn_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwCommentIsLocatedIn;
-create foreign table fdwCommentIsLocatedIn
-	(
-		commentId int8, 
-		placeId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwCommentIsLocatedIn as row
-match (r:"Comment"), (s:Place)
-where (r).id::int8 = (row).commentId and (s).id::int8 = (row).placeId
-create (r)-[:isLocatedInComment]->(s);
-
---- isLocatedIn (person)
-\set file_name :source_path/person_isLocatedIn_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPersonIsLocatedIn;
-create foreign table fdwPersonIsLocatedIn
+drop foreign table fdwHasInterest;
+create foreign table fdwHasInterest
 	(
 		personId int8, 
-		placeId int8
+		tagId int8
 	)
 	server graph_import
 	options 
@@ -843,58 +554,10 @@ create foreign table fdwPersonIsLocatedIn
 		 NULL '',
 		 FILENAME :'file_name'
 	);
-load from fdwPersonIsLocatedIn as row
-match (r:Person), (s:Place)
-where (r).id::int8 = (row).personId and (s).id::int8 = (row).placeId
-create (r)-[:isLocatedInPerson]->(s);
-
---- isPartOf
-\set file_name :source_path/place_isPartOf_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwIsPartOf;
-create foreign table fdwIsPartOf
-	(
-		place1Id int8, 
-		place2Id int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwIsPartOf as row
-match (r:Place), (s:Place)
-where (r).id::int8 = (row).place1Id and (s).id::int8 = (row).place2Id
-create (r)-[:isPartOf]->(s);
-
---- isSubclassOf
-\set file_name :source_path/tagclass_isSubclassOf_tagclass_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwIsSubclassOf;
-create foreign table fdwIsSubclassOf
-	(
-		tagclass1Id int8, 
-		tagclass2Id int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwIsSubclassOf as row
-match (r:TagClass), (s:TagClass)
-where (r).id::int8 = (row).tagclass1Id and (s).id::int8 = (row).tagclass2Id
-create (r)-[:isSubclassOf]->(s);
+load from fdwHasInterest as row
+match (r:Person), (s:Tag)
+where (r).id::int8 = (row).personId and (s).id::int8 = (row).tagId
+create (r)-[:hasInterest]->(s);
 
 --- knows
 \set file_name :source_path/person_knows_person_0_0.csv
@@ -971,54 +634,6 @@ match (r:Person), (s:"Comment")
 where (r).id::int8 = (row).personId and (s).id::int8 = (row).commentId
 create (r)-[:likesComment {'creationDate': (row).creationDate}]->(s);
 
---- replyOf (post)
-\set file_name :source_path/comment_replyOf_post_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwReplyOfPost;
-create foreign table fdwReplyOfPost
-	(
-		commentId int8, 
-		postId int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwReplyOfPost as row
-match (r:"Comment"), (s:Post)
-where (r).id::int8 = (row).commentId and (s).id::int8 = (row).postId
-create (r)-[:replyOfPost]->(s);
-
---- replyOf (comment)
-\set file_name :source_path/comment_replyOf_comment_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwReplyOfComment;
-create foreign table fdwReplyOfComment
-	(
-		comment1Id int8, 
-		comment2Id int8
-	)
-	server graph_import
-	options 
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwReplyOfComment as row
-match (r:"Comment"), (s:"Comment")
-where (r).id::int8 = (row).comment1Id and (s).id::int8 = (row).comment2Id
-create (r)-[:replyOfComment]->(s);
-
 --- studyAt
 \set file_name :source_path/person_studyAt_organisation_0_0.csv
 \echo Start Loading :file_name
@@ -1069,6 +684,54 @@ match (r:Person), (s:Organization)
 where (r).id::int8 = (row).personId and (s).id::int8 = (row).organId
 create (r)-[:workAt {'workFrom': (row).workFrom}]->(s);
 
+--- hasType
+\set file_name :source_path/tag_hasType_tagclass_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwHasType;
+create foreign table fdwHasType
+	(
+		tagId int8, 
+		tagclassId int8
+	)
+	server graph_import
+	options 
+	(
+		 FORMAT 'csv',
+		 HEADER 'true',
+		 DELIMITER '|',
+		 NULL '',
+		 FILENAME :'file_name'
+	);
+load from fdwHasType as row
+match (r:Tag), (s:TagClass)
+where (r).id::int8 = (row).tagId and (s).id::int8 = (row).tagclassId
+create (r)-[:hasType]->(s);
+
+--- isSubclassOf
+\set file_name :source_path/tagclass_isSubclassOf_tagclass_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwIsSubclassOf;
+create foreign table fdwIsSubclassOf
+	(
+		tagclass1Id int8, 
+		tagclass2Id int8
+	)
+	server graph_import
+	options 
+	(
+		 FORMAT 'csv',
+		 HEADER 'true',
+		 DELIMITER '|',
+		 NULL '',
+		 FILENAME :'file_name'
+	);
+load from fdwIsSubclassOf as row
+match (r:TagClass), (s:TagClass)
+where (r).id::int8 = (row).tagclass1Id and (s).id::int8 = (row).tagclass2Id
+create (r)-[:isSubclassOf]->(s);
+
 -- create index 
 
 -- vertices
@@ -1094,189 +757,110 @@ create index on ldbc.tag using gin(properties jsonb_path_ops);
 create index on ldbc.tagclass using gin(properties jsonb_path_ops);
 
 -- edges
-create index on ldbc.containerOf (id);
-create index on ldbc.hasCreator (id);
-create index on ldbc.hasCreatorPost (id);
-create index on ldbc.hasCreatorComment (id);
-create index on ldbc.hasInterest (id);
 create index on ldbc.hasMember (id);
-create index on ldbc.hasModerator (id);
 create index on ldbc.hasTag (id);
 create index on ldbc.hasTagPost (id);
 create index on ldbc.hasTagComment (id);
 create index on ldbc.hasTagForum (id);
-create index on ldbc.hasType (id);
-create index on ldbc.isLocatedIn (id);
-create index on ldbc.isLocatedInOrgan (id);
-create index on ldbc.isLocatedInPost (id);
-create index on ldbc.isLocatedInComment (id);
-create index on ldbc.isLocatedInPerson (id);
-create index on ldbc.isPartOf (id);
-create index on ldbc.isSubclassOf (id);
+create index on ldbc.hasInterest (id);
 create index on ldbc.knows (id);
 create index on ldbc.likes (id);
 create index on ldbc.likesPost (id);
 create index on ldbc.likesComment (id);
-create index on ldbc.replyOf (id);
-create index on ldbc.replyOfPost (id);
-create index on ldbc.replyOfComment (id);
 create index on ldbc.studyAt (id);
 create index on ldbc.workAt (id);
+create index on ldbc.hasType (id);
+create index on ldbc.isSubclassOf (id);
 
-create index on ldbc.containerOf (start, "end", id);
-create index on ldbc.hasCreator (start, "end", id);
-create index on ldbc.hasCreatorPost (start, "end", id);
-create index on ldbc.hasCreatorComment (start, "end", id);
-create index on ldbc.hasInterest (start, "end", id);
 create index on ldbc.hasMember (start, "end", id);
-create index on ldbc.hasModerator (start, "end", id);
 create index on ldbc.hasTag (start, "end", id);
 create index on ldbc.hasTagPost (start, "end", id);
 create index on ldbc.hasTagComment (start, "end", id);
 create index on ldbc.hasTagForum (start, "end", id);
-create index on ldbc.hasType (start, "end", id);
-create index on ldbc.isLocatedIn (start, "end", id);
-create index on ldbc.isLocatedInOrgan (start, "end", id);
-create index on ldbc.isLocatedInPost (start, "end", id);
-create index on ldbc.isLocatedInComment (start, "end", id);
-create index on ldbc.isLocatedInPerson (start, "end", id);
-create index on ldbc.isPartOf (start, "end", id);
-create index on ldbc.isSubclassOf (start, "end", id);
+create index on ldbc.hasInterest (start, "end", id);
 create index on ldbc.knows (start, "end", id);
 create index on ldbc.likes (start, "end", id);
 create index on ldbc.likesPost (start, "end", id);
 create index on ldbc.likesComment (start, "end", id);
-create index on ldbc.replyOf (start, "end", id);
-create index on ldbc.replyOfPost (start, "end", id);
-create index on ldbc.replyOfComment (start, "end", id);
 create index on ldbc.studyAt (start, "end", id);
 create index on ldbc.workAt (start, "end", id);
+create index on ldbc.hasType (start, "end", id);
+create index on ldbc.isSubclassOf (start, "end", id);
 
-create index on ldbc.containerOf ("end", start, id);
-create index on ldbc.hasCreator ("end", start, id);
-create index on ldbc.hasCreatorPost ("end", start, id);
-create index on ldbc.hasCreatorComment ("end", start, id);
-create index on ldbc.hasInterest ("end", start, id);
 create index on ldbc.hasMember ("end", start, id);
-create index on ldbc.hasModerator ("end", start, id);
 create index on ldbc.hasTag ("end", start, id);
 create index on ldbc.hasTagPost ("end", start, id);
 create index on ldbc.hasTagComment ("end", start, id);
 create index on ldbc.hasTagForum ("end", start, id);
-create index on ldbc.hasType ("end", start, id);
-create index on ldbc.isLocatedIn ("end", start, id);
-create index on ldbc.isLocatedInOrgan ("end", start, id);
-create index on ldbc.isLocatedInPost ("end", start, id);
-create index on ldbc.isLocatedInComment ("end", start, id);
-create index on ldbc.isLocatedInPerson ("end", start, id);
-create index on ldbc.isPartOf ("end", start, id);
-create index on ldbc.isSubclassOf ("end", start, id);
+create index on ldbc.hasInterest ("end", start, id);
 create index on ldbc.knows ("end", start, id);
 create index on ldbc.likes ("end", start, id);
 create index on ldbc.likesPost ("end", start, id);
 create index on ldbc.likesComment ("end", start, id);
-create index on ldbc.replyOf ("end", start, id);
-create index on ldbc.replyOfPost ("end", start, id);
-create index on ldbc.replyOfComment ("end", start, id);
 create index on ldbc.studyAt ("end", start, id);
 create index on ldbc.workAt ("end", start, id);
+create index on ldbc.hasType ("end", start, id);
+create index on ldbc.isSubclassOf ("end", start, id);
 
 -- gin
-create index on ldbc.containerOf using gin(properties jsonb_path_ops);
-create index on ldbc.hasCreator using gin(properties jsonb_path_ops);
-create index on ldbc.hasCreatorPost using gin(properties jsonb_path_ops);
-create index on ldbc.hasCreatorComment using gin(properties jsonb_path_ops);
-create index on ldbc.hasInterest using gin(properties jsonb_path_ops);
 create index on ldbc.hasMember using gin(properties jsonb_path_ops);
-create index on ldbc.hasModerator using gin(properties jsonb_path_ops);
 create index on ldbc.hasTag using gin(properties jsonb_path_ops);
 create index on ldbc.hasTagPost using gin(properties jsonb_path_ops);
 create index on ldbc.hasTagComment using gin(properties jsonb_path_ops);
 create index on ldbc.hasTagForum using gin(properties jsonb_path_ops);
-create index on ldbc.hasType using gin(properties jsonb_path_ops);
-create index on ldbc.isLocatedIn using gin(properties jsonb_path_ops);
-create index on ldbc.islocatedInOrgan using gin(properties jsonb_path_ops);
-create index on ldbc.isLocatedInPost using gin(properties jsonb_path_ops);
-create index on ldbc.isLocatedInComment using gin(properties jsonb_path_ops);
-create index on ldbc.isLocatedInPerson using gin(properties jsonb_path_ops);
-create index on ldbc.isPartOf using gin(properties jsonb_path_ops);
-create index on ldbc.isSubclassOf using gin(properties jsonb_path_ops);
+create index on ldbc.hasInterest using gin(properties jsonb_path_ops);
 create index on ldbc.knows using gin(properties jsonb_path_ops);
 create index on ldbc.likes using gin(properties jsonb_path_ops);
 create index on ldbc.likesPost using gin(properties jsonb_path_ops);
 create index on ldbc.likesComment using gin(properties jsonb_path_ops);
-create index on ldbc.replyOf using gin(properties jsonb_path_ops);
-create index on ldbc.replyOfPost using gin(properties jsonb_path_ops);
-create index on ldbc.replyOfComment using gin(properties jsonb_path_ops);
 create index on ldbc.studyat using gin(properties jsonb_path_ops);
 create index on ldbc.workat using gin(properties jsonb_path_ops);
+create index on ldbc.hasType using gin(properties jsonb_path_ops);
+create index on ldbc.isSubclassOf using gin(properties jsonb_path_ops);
+
+-- Addtional indexes and Cluster
+create property index message_cc_idx 
+	on message (("creator"::int8), ("creationdate"::int8));
+create property index post_cc_idx 
+	on post (("creator"::int8),("creationdate"::int8));
+create property index comment_cc_idx 
+	on "Comment" (("creator"::int8),("creationdate"::int8));
+
+cluster verbose ldbc.message using message_cc_idx;
+cluster verbose ldbc.post using post_cc_idx;
+cluster verbose ldbc."Comment" using comment_cc_idx;
+
+create property index post_fc_idx 
+	on post (("forumid"::int8),("creator"::int8));
+
+create property index comment_replyofpost_idx 
+	on "Comment" (("replyofpost"::int8));
+create property index comment_replyofcomment_idx 
+	on "Comment" (("replyofcomment"::int8));
+
+-- Analyze vertices
+analyze ldbc.forum;
+analyze ldbc.message;
+analyze ldbc.post;
+analyze ldbc."Comment";
+analyze ldbc.organization;
+analyze ldbc.person;
+analyze ldbc.place;
+analyze ldbc.tag;
+analyze ldbc.tagclass;
 
 -- Analyze edges 
-VACUUM analyze ldbc.containerOf;
-VACUUM analyze ldbc.hasCreator;
-VACUUM analyze ldbc.hasCreatorPost;
-VACUUM analyze ldbc.hasCreatorComment;
-VACUUM analyze ldbc.hasInterest;
 VACUUM analyze ldbc.hasMember;
-VACUUM analyze ldbc.hasModerator;
 VACUUM analyze ldbc.hasTag;
 VACUUM analyze ldbc.hasTagPost;
 VACUUM analyze ldbc.hasTagComment;
 VACUUM analyze ldbc.hasTagForum;
-VACUUM analyze ldbc.hasType;
-VACUUM analyze ldbc.isLocatedIn;
-VACUUM analyze ldbc.isLocatedInOrgan;
-VACUUM analyze ldbc.isLocatedInPost;
-VACUUM analyze ldbc.isLocatedInComment;
-VACUUM analyze ldbc.isLocatedInPerson;
-VACUUM analyze ldbc.isPartOf;
-VACUUM analyze ldbc.isSubclassOf;
+VACUUM analyze ldbc.hasInterest;
 VACUUM analyze ldbc.knows;
 VACUUM analyze ldbc.likes;
 VACUUM analyze ldbc.likesPost;
 VACUUM analyze ldbc.likesComment;
-VACUUM analyze ldbc.replyOf;
-VACUUM analyze ldbc.replyOfPost;
-VACUUM analyze ldbc.replyOfComment;
 VACUUM analyze ldbc.studyAt;
 VACUUM analyze ldbc.workAt;
-
--- denormalization & cluster
-
--- message
-
-drop table ldbc.message4;
-
-create table ldbc.message4(id, properties) as
-select m.id, (m.properties
-	|| ('{ "creatorID": ' || h."end"
-	||  ', "placeID": '   || l."end"
-	||  '}')::jsonb)
-from ldbc.message m, ldbc.hascreator h, ldbc.islocatedinmsg l
-where m.id = h.start
-  and m.id = l.start;
-
-create property index on message4 (("creatorID"::graphid), ("creationdate"::int8));
-
-cluster verbose ldbc.message4 using message4_property_idx;
-
-analyze ldbc.message4;
-
--- post
-
-drop table ldbc.post4;
-
-create table ldbc.post4(id, properties) as
-select m.id, (m.properties
-	|| ('{ "creatorID": ' || h."end"
-	||  ', "forumID": '   || c.start
-	||  '}')::jsonb)
-from ldbc.message m, ldbc.hascreatorpost h, ldbc.containerof c
-where m.id = h.start
-  and m.id = c."end";
-
-create property index on post4 (("forumID"::graphid),("creatorID"::graphid));
-
-cluster verbose ldbc.post4 using post4_property_idx;
-
-analyze ldbc.post4;
+VACUUM analyze ldbc.hasType;
+VACUUM analyze ldbc.isSubclassOf;

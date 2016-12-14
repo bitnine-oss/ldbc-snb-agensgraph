@@ -405,26 +405,27 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery7 ldbcQuery7, DbConnectionState dbConnectionState, ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person), (message:Message)<-[l:likes]-(liker:Person) " +
-                    "WHERE person.id::int8 = ? AND person.id::int8 = message.creator::int8 " +
-                    "WITH liker, message, l.\"creationDate\"::int8 AS likeTime, person " +
-                    "WITH " +
-                    "  liker, " +
-                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', likeTime, 'id', message.id::int8))) AS latestLike, " +
-                    "  person " +
-                    "RETURN " +
-                    "  liker.id::int8 AS personId, " +
+            String stmt = "MATCH (person:Person), (message:Message)<-[l:likes]-(liker:Person)  " +
+                    "WHERE person.id::int8 = ? AND person.id::int8 = message.creator::int8  " +
+                    "WITH  " +
+                    "  liker.id::int8 AS personId,  " +
                     "  liker.firstName AS personFirstName, " +
                     "  liker.lastName AS personLastName, " +
-                    "  (latestLike->>'likeTime')::int8 AS likeTime, " +
-                    "  (latestLike->'msg'->>'id')::int8 AS messageId, " +
-                    "  CASE latestLike->'msg'->>'content' is not null " +
-                    "    WHEN true THEN latestLike->'msg'->>'content' " +
-                    "    ELSE latestLike->'msg'->>'imagefile' " +
-                    "  END AS messageContent, " +
-                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency, " +
-                    "  not exists((liker)-[:knows]-(person)) " +
-                    "ORDER BY likeTime DESC, personId ASC " +
+                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', l.\"creationDate\"::int8, 'id', message.id::int8))) AS latestLike,  " +
+                    "  person.id::int8 AS otherId " +
+                    "RETURN  " +
+                    "  personId,  " +
+                    "  personFirstName,  " +
+                    "  personLastName,  " +
+                    "  (latestLike->>'likeTime')::int8 AS likeTime,  " +
+                    "  (latestLike->'msg'->>'id')::int8 AS messageId,  " +
+                    "  CASE latestLike->'msg'->>'content' is not null  " +
+                    "    WHEN true THEN latestLike->'msg'->>'content'  " +
+                    "    ELSE latestLike->'msg'->>'imagefile'  " +
+                    "  END AS messageContent,  " +
+                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
+                    "  not exists((:Person {id: personId})-[:knows]-(:Person {id: otherId}))  " +
+                    "ORDER BY likeTime DESC, personId ASC  " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery7.personId(), ldbcQuery7.limit());
 
@@ -538,34 +539,43 @@ public class AGDb extends Db {
             String stmt = "MATCH (person:Person)-[:knows*2..2]-(friend:Person), (city:Place) " +
                     "WHERE person.id::int8 = ? " +
                     "  AND friend.place::int8 = city.id::int8 " +
-                    "WITH " +
-                    "  friend, " +
-                    "  city, " +
-                    "  person, " +
-                    "  extract(month from to_timestamp(friend.birthday::int8 / 1000)) AS birthdayMonth, " +
-                    "  extract(day from to_timestamp(friend.birthday::int8 / 1000)) AS birthdayDay " +
-                    "WHERE " +
-                    "  ((birthdayMonth = ? AND birthdayDay >= 21) OR " +
-                    "   (birthdayMonth = (? % 12)+1 AND birthdayDay < 22)) " +
+                    "  AND ((extract(month from to_timestamp(friend.birthday::int8 / 1000)) = ? AND extract(day from to_timestamp(friend.birthday::int8 / 1000)) >= 21) OR " +
+                    "       (extract(month from to_timestamp(friend.birthday::int8 / 1000)) = (? % 12)+1 AND extract(day from to_timestamp(friend.birthday::int8 / 1000)) < 22)) " +
                     "  AND id(friend) <> id(person) " +
                     "  AND not exists((friend)-[:knows]-(person)) " +
-                    "WITH DISTINCT friend, city, person " +
-                    "OPTIONAL MATCH (post:Post) " +
-                    "WHERE friend.id::int8 = post.creator::int8 " +
-                    "WITH friend, city, array_remove(array_agg(post), NULL) AS posts, person " +
-                    "WITH  " +
-                    "  friend, " +
-                    "  city, " +
-                    "  case posts = '{}' when true then 0 " +
-                    "  else array_length(posts, 1) end AS postCount, " +
-                    "  c10_fc(posts, person.id::int8) AS commonPostCount " +
-                    "RETURN " +
+                    "WITH DISTINCT " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +
                     "  friend.lastName AS personLastName, " +
-                    "  commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
                     "  friend.gender AS personGender, " +
-                    "  city.name AS personCityName " +
+                    "  city.name AS personCityName, " +
+                    "  person.id::int8 AS startPersonId " +
+                    "OPTIONAL MATCH (post:Post) " +
+                    "WHERE personId = post.creator::int8 " +
+                    "WITH " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  personGender, " +
+                    "  personCityName, " +
+                    "  array_remove(array_agg(post.id::int8), NULL) posts, " +
+                    "  startPersonId " +
+                    "WITH " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  personGender, " +
+                    "  personCityName, " +
+                    "  case posts = '{}' when true then 0 " +
+                    "  else array_length(posts, 1) end AS postCount, " +
+                    "  c10_fc(posts, startPersonId) AS commonPostCount " +
+                    "RETURN " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
+                    "  personGender, " +
+                    "  personCityName " +
                     "ORDER BY commonInterestScore DESC, personId ASC " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery10.personId(), ldbcQuery10.month(), ldbcQuery10.month(),

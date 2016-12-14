@@ -30,26 +30,19 @@ end
 $$ language plpgsql;
 
 -- used in complex query 10
-create or replace function c10_fc(posts vertex[], person_id int8)
+create or replace function c10_fc(post_ids int8[], person_id int8)
 returns int8 as $$
 declare
 	cnt int8 := 0;
-	has_interest_tag boolean;
-	post vertex;
 	post_id int8;
+	result int8;
 begin
-	if posts is null
-	then
-		return 0;
-	end if;
-
-	foreach post in array posts
+	foreach post_id in array post_ids
 	loop
-		post_id = (properties(post)).id::int8;
 		match (post:Post)-[:hasTagPost]->(:Tag)<-[:hasInterest]-(p:Person)
 		where post.id::int8 = post_id and p.id::int8 = person_id
-		return count(p) > 0 into has_interest_tag;
-		if has_interest_tag
+		return 1 into result;
+		if FOUND
 		then
 			cnt := cnt + 1;
 		end if;

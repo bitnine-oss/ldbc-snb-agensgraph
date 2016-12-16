@@ -20,10 +20,9 @@ create vlabel TagClass;
 
 -- Make Edge Labels
 create elabel hasMember;
-create elabel hasTag;
-create elabel hasTagPost inherits (hasTag);
-create elabel hasTagComment inherits (hasTag);
-create elabel hasTagForum inherits (hasTag);
+create elabel hasTagPost;
+create elabel hasTagComment;
+create elabel hasTagForum;
 create elabel hasInterest;
 create elabel knows;
 create elabel likes;
@@ -45,7 +44,6 @@ alter vlabel Place set unlogged;
 alter vlabel Tag set unlogged;
 alter vlabel TagClass set unlogged;
 alter elabel hasMember set unlogged;
-alter elabel hasTag set unlogged;
 alter elabel hasTagPost set unlogged;
 alter elabel hasTagComment set unlogged;
 alter elabel hasTagForum set unlogged;
@@ -81,7 +79,6 @@ drop index ldbc.tag_properties_idx;
 drop index ldbc.tagclass_properties_idx;
 
 drop index ldbc.hasMember_start_idx;
-drop index ldbc.hasTag_start_idx;
 drop index ldbc.hasTagPost_start_idx;
 drop index ldbc.hasTagComment_start_idx;
 drop index ldbc.hasTagForum_start_idx;
@@ -96,7 +93,6 @@ drop index ldbc.hasType_start_idx;
 drop index ldbc.isSubclassOf_start_idx;
 
 drop index ldbc.hasMember_end_idx;
-drop index ldbc.hasTag_end_idx;
 drop index ldbc.hasTagPost_end_idx;
 drop index ldbc.hasTagComment_end_idx;
 drop index ldbc.hasTagForum_end_idx;
@@ -111,7 +107,6 @@ drop index ldbc.hasType_end_idx;
 drop index ldbc.isSubclassOf_end_idx;
 
 drop index ldbc.hasMember_id_idx;
-drop index ldbc.hasTag_id_idx;
 drop index ldbc.hasTagPost_id_idx;
 drop index ldbc.hasTagComment_id_idx;
 drop index ldbc.hasTagForum_id_idx;
@@ -126,7 +121,6 @@ drop index ldbc.hasType_id_idx;
 drop index ldbc.isSubclassOf_id_idx;
 
 drop index ldbc.hasMember_properties_idx;
-drop index ldbc.hasTag_properties_idx;
 drop index ldbc.hasTagPost_properties_idx;
 drop index ldbc.hasTagComment_properties_idx;
 drop index ldbc.hasTagForum_properties_idx;
@@ -758,7 +752,6 @@ create index on ldbc.tagclass using gin(properties jsonb_path_ops);
 
 -- edges
 create index on ldbc.hasMember (id);
-create index on ldbc.hasTag (id);
 create index on ldbc.hasTagPost (id);
 create index on ldbc.hasTagComment (id);
 create index on ldbc.hasTagForum (id);
@@ -773,7 +766,6 @@ create index on ldbc.hasType (id);
 create index on ldbc.isSubclassOf (id);
 
 create index on ldbc.hasMember (start, "end", id);
-create index on ldbc.hasTag (start, "end", id);
 create index on ldbc.hasTagPost (start, "end", id);
 create index on ldbc.hasTagComment (start, "end", id);
 create index on ldbc.hasTagForum (start, "end", id);
@@ -788,7 +780,6 @@ create index on ldbc.hasType (start, "end", id);
 create index on ldbc.isSubclassOf (start, "end", id);
 
 create index on ldbc.hasMember ("end", start, id);
-create index on ldbc.hasTag ("end", start, id);
 create index on ldbc.hasTagPost ("end", start, id);
 create index on ldbc.hasTagComment ("end", start, id);
 create index on ldbc.hasTagForum ("end", start, id);
@@ -804,7 +795,6 @@ create index on ldbc.isSubclassOf ("end", start, id);
 
 -- gin
 create index on ldbc.hasMember using gin(properties jsonb_path_ops);
-create index on ldbc.hasTag using gin(properties jsonb_path_ops);
 create index on ldbc.hasTagPost using gin(properties jsonb_path_ops);
 create index on ldbc.hasTagComment using gin(properties jsonb_path_ops);
 create index on ldbc.hasTagForum using gin(properties jsonb_path_ops);
@@ -838,6 +828,23 @@ create property index comment_replyofpost_idx
 create property index comment_replyofcomment_idx 
 	on "Comment" (("replyofcomment"::int8));
 
+create unique index on ldbc.hasMember (
+	"end", ((properties #>> '{joinDate}'::text[])::int8), start, id);
+
+--create index on ldbc.person (((properties #>> '{place}'::text[])::int8));
+--
+--create index on ldbc.place (((properties #>> '{ispartof}'::text[])::int8));
+--
+--create unique index on ldbc.likes (
+--	start , ((properties #>> '{creationDate}'::text[])::int8), "end", id);
+--create unique index on ldbc.likesPost (
+--	start , ((properties #>> '{creationDate}'::text[])::int8), "end", id);
+--create unique index on ldbc.likesComment (
+--	start , ((properties #>> '{creationDate}'::text[])::int8), "end", id);
+--
+--create index on ldbc.hasTagPost ("end");
+--create index on ldbc.hasTagComment ("end");
+
 -- Analyze vertices
 analyze ldbc.forum;
 analyze ldbc.message;
@@ -851,7 +858,6 @@ analyze ldbc.tagclass;
 
 -- Analyze edges 
 VACUUM analyze ldbc.hasMember;
-VACUUM analyze ldbc.hasTag;
 VACUUM analyze ldbc.hasTagPost;
 VACUUM analyze ldbc.hasTagComment;
 VACUUM analyze ldbc.hasTagForum;

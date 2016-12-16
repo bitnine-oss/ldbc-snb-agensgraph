@@ -549,29 +549,49 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "-- " + ldbcQuery10.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows*2..2]-(friend:Person) " +
+            String stmt = "-- " + ldbcQuery10.toString() +" \n" +
+                    "MATCH (person:Person)-[:knows*2..2]-(friend:Person), (city:Place) " +
                     "WHERE person.id::int8 = ? " +
-                    "AND id(friend) <> id(person) " +
-                    "AND not exists((friend)-[:knows]-(person)) " +
-                    "WITH friend, person, extract(month from to_timestamp(friend.birthday::int8 / 1000)) AS birthdayMonth, extract(day from to_timestamp(friend.birthday::int8 / 1000)) AS birthdayDay " +
-                    "WHERE ((birthdayMonth = ? AND birthdayDay >= 21) OR (birthdayMonth = (? % 12)+1 AND birthdayDay < 22))   " +
-                    "WITH DISTINCT friend, person " +
-
+                    "  AND friend.place::int8 = city.id::int8 " +
+                    "  AND ((extract(month from to_timestamp(friend.birthday::int8 / 1000)) = ? AND extract(day from to_timestamp(friend.birthday::int8 / 1000)) >= 21) OR " +
+                    "       (extract(month from to_timestamp(friend.birthday::int8 / 1000)) = (? % 12)+1 AND extract(day from to_timestamp(friend.birthday::int8 / 1000)) < 22)) " +
+                    "  AND id(friend) <> id(person) " +
+                    "  AND not exists((friend)-[:knows]-(person)) " +
+                    "WITH DISTINCT " +
+                    "  friend.id::int8 AS personId, " +
+                    "  friend.firstName AS personFirstName, " +
+                    "  friend.lastName AS personLastName, " +
+                    "  friend.gender AS personGender, " +
+                    "  city.name AS personCityName " +
                     "OPTIONAL MATCH (post:Post) " +
-                    "WHERE friend.id::int8 = post.creator::int8 " +
-                    "WITH friend, count(distinct post) AS postCount, person " +
-                    "OPTIONAL MATCH (commonpost:Post)-[:hastagpost]->(:tag)<-[:hasinterest]-(person) " +
-                    "WHERE friend.id::int8 = commonpost.creator::int8 " +
-                    "WITH friend, postCount, count(distinct commonpost) AS commonPostCount " +
-
-                    "WITH friend, commonPostCount - (postCount - commonPostCount) AS commonInterestScore " +
-                    "ORDER BY commonInterestScore DESC, friend.id ASC LIMIT ? " +
-                    "MATCH (city:place) " +
-                    "WHERE friend.place::int8 = city.id::int8 " +
-                    "RETURN friend.id::int8 AS personId, friend.firstName AS personFirstName, friend.lastName AS personLastName, commonInterestScore, friend.gender AS personGender, city.name AS personCityName ";
+                    "WHERE personId = post.creator::int8 " +
+                    "WITH " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  personGender, " +
+                    "  personCityName, " +
+                    "  array_remove(array_agg(post.id::int8), NULL) posts " +
+                    "WITH " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  personGender, " +
+                    "  personCityName, " +
+                    "  case posts = '{}' when true then 0 " +
+                    "  else array_length(posts, 1) end AS postCount, " +
+                    "  c10_fc(posts, ?) AS commonPostCount " +
+                    "RETURN " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
+                    "  personGender, " +
+                    "  personCityName " +
+                    "ORDER BY commonInterestScore DESC, personId ASC " +
+                    "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery10.personId(), ldbcQuery10.month(), ldbcQuery10.month(),
-                    ldbcQuery10.limit());
+                    ldbcQuery10.personId(), ldbcQuery10.limit());
 
             List<LdbcQuery10Result> resultList = new ArrayList<>();
             try {

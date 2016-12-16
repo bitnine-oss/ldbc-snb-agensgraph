@@ -548,8 +548,7 @@ public class AGDb extends Db {
                     "  friend.firstName AS personFirstName, " +
                     "  friend.lastName AS personLastName, " +
                     "  friend.gender AS personGender, " +
-                    "  city.name AS personCityName, " +
-                    "  person.id::int8 AS startPersonId " +
+                    "  city.name AS personCityName " +
                     "OPTIONAL MATCH (post:Post) " +
                     "WHERE personId = post.creator::int8 " +
                     "WITH " +
@@ -558,8 +557,7 @@ public class AGDb extends Db {
                     "  personLastName, " +
                     "  personGender, " +
                     "  personCityName, " +
-                    "  array_remove(array_agg(post.id::int8), NULL) posts, " +
-                    "  startPersonId " +
+                    "  array_remove(array_agg(post.id::int8), NULL) posts " +
                     "WITH " +
                     "  personId, " +
                     "  personFirstName, " +
@@ -568,7 +566,7 @@ public class AGDb extends Db {
                     "  personCityName, " +
                     "  case posts = '{}' when true then 0 " +
                     "  else array_length(posts, 1) end AS postCount, " +
-                    "  c10_fc(posts, startPersonId) AS commonPostCount " +
+                    "  c10_fc(posts, ?) AS commonPostCount " +
                     "RETURN " +
                     "  personId, " +
                     "  personFirstName, " +
@@ -578,8 +576,8 @@ public class AGDb extends Db {
                     "  personCityName " +
                     "ORDER BY commonInterestScore DESC, personId ASC " +
                     "LIMIT ?";
-            ResultSet rs = client.executeQuery(stmt, ldbcQuery10.personId(), ldbcQuery10.month(), ldbcQuery10.month(),
-                    ldbcQuery10.limit());
+            ResultSet rs = client.executeQuery(stmt, ldbcQuery10.personId(),
+                    ldbcQuery10.month(), ldbcQuery10.month(), ldbcQuery10.personId(), ldbcQuery10.limit());
 
             List<LdbcQuery10Result> resultList = new ArrayList<>();
             try {

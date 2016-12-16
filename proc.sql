@@ -30,27 +30,16 @@ end
 $$ language plpgsql;
 
 -- used in complex query 10
+set graph_path = ldbc;
+
 create or replace function c10_fc(post_ids int8[], person_id int8)
 returns int8 as $$
-declare
-	cnt int8 := 0;
-	post_id int8;
-	result int8;
-begin
-	foreach post_id in array post_ids
-	loop
-		match (post:Post)-[:hasTagPost]->(:Tag)<-[:hasInterest]-(p:Person)
-		where post.id::int8 = post_id and p.id::int8 = person_id
-		return 1 into result;
-		if FOUND
-		then
-			cnt := cnt + 1;
-		end if;
-	end loop;
-
-	return cnt;
-end
-$$ language plpgsql;
+	select count(*)
+	from unnest(post_ids) x (id)
+	where exists (select 1
+				  from (match (post:Post)-[:hasTagPost]->(:Tag)<-[:hasInterest]-(p:Person)
+				  where post.id::int8 = x.id and p.id::int8 = person_id return 1) y);
+$$ language sql;
 
 create or replace function calc_weight(node_ids int8[])
 returns double precision as $$

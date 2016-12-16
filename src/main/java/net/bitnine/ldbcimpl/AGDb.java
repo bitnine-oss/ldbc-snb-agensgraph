@@ -414,35 +414,11 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery7 ldbcQuery7, DbConnectionState dbConnectionState, ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-<<<<<<< HEAD
             String stmt = 
                     " /*+ Rows(person message #100) */ \n" + // to use the index scan for 'likes' and to chose SubPlan1
                     "-- " + ldbcQuery7.toString() +" \n" + 
                     "MATCH (person:Person), (message:Message)<-[l:likes]-(liker:Person) " +
                     "WHERE person.id::int8 = " + ldbcQuery7.personId() + " AND person.id::int8 = message.creator::int8 " +
-                    "WITH liker, message, l.\"creationDate\"::int8 AS likeTime, person " +
-                    "WITH " +
-                    "  liker, " +
-                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', likeTime, 'id', message.id::int8))) AS latestLike, " +
-                    "  person " +
-                    "RETURN " +
-                    "  liker.id::int8 AS personId, " +
-                    "  liker.firstName AS personFirstName, " +
-                    "  liker.lastName AS personLastName, " +
-                    "  (latestLike->>'likeTime')::int8 AS likeTime, " +
-                    "  (latestLike->'msg'->>'id')::int8 AS messageId, " +
-                    "  CASE latestLike->'msg'->>'content' is not null " +
-                    "    WHEN true THEN latestLike->'msg'->>'content' " +
-                    "    ELSE latestLike->'msg'->>'imagefile' " +
-                    "  END AS messageContent, " +
-                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency, " +
-                    "  not exists((liker)-[:knows]-(person)) " +
-                    "ORDER BY likeTime DESC, personId ASC " +
-                    "LIMIT " + ldbcQuery7.limit();
-            ResultSet rs = client.executeQuery(stmt); //, ldbcQuery7.personId(), ldbcQuery7.limit());
-=======
-            String stmt = "MATCH (person:Person), (message:Message)<-[l:likes]-(liker:Person)  " +
-                    "WHERE person.id::int8 = ? AND person.id::int8 = message.creator::int8  " +
                     "WITH  " +
                     "  liker.id::int8 AS personId,  " +
                     "  liker.firstName AS personFirstName, " +
@@ -462,10 +438,8 @@ public class AGDb extends Db {
                     "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
                     "  not exists((:Person {id: personId})-[:knows]-(:Person {id: otherId}))  " +
                     "ORDER BY likeTime DESC, personId ASC  " +
-                    "LIMIT ?";
-            ResultSet rs = client.executeQuery(stmt, ldbcQuery7.personId(), ldbcQuery7.limit());
->>>>>>> 5d48260e995ccf73e7a15aa70449476f630ae2ff
-
+                    "LIMIT " + ldbcQuery7.limit();
+            ResultSet rs = client.executeQuery(stmt); //, ldbcQuery7.personId(), ldbcQuery7.limit());
             List<LdbcQuery7Result> resultList = new ArrayList<>();
             try {
                 while (rs.next()) {

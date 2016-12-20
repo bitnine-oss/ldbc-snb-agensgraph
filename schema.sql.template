@@ -164,6 +164,7 @@ create (:Forum =row_to_json(row)::jsonb);
 \set file_name :source_path/post_0_0.csv
 \echo Start Loading :file_name
 
+drop view PostBase;
 drop foreign table fdwPost;
 create foreign table fdwPost 
 	(
@@ -172,7 +173,7 @@ create foreign table fdwPost
 		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80),
-		lanaguage varchar(80),
+		language varchar(80),
 		content text,
 		length int4,
 		creator int8,
@@ -188,13 +189,20 @@ create foreign table fdwPost
 		 NULL '',
 		 FILENAME :'file_name'
 	);
-load from fdwPost as row
+create view PostBase AS
+ 	select id, creationDate, imageFile, content, creator, forumID, place
+	from fdwPost;
+load from PostBase as row
 create (:Post =row_to_json(row)::jsonb);
+drop table postext;
+create table postext as 
+	select id, locationIP, browserUsed, language, length from fdwPost;
 
 --- Comment (inherits Message)
 \set file_name :source_path/comment_0_0.csv
 \echo Start Loading :file_name
 
+drop view CommentBase;
 drop foreign table fdwComment;
 create foreign table fdwComment 
 	(
@@ -218,8 +226,14 @@ create foreign table fdwComment
 		 NULL '',
 		 FILENAME :'file_name'
 	);
-load from fdwComment as row
+create view CommentBase AS
+ 	select id, creationDate, content, creator, place, replyofpost, replyOfComment
+	from fdwComment;
+load from CommentBase as row
 create (:"Comment" =row_to_json(row)::jsonb);
+drop table commentext;
+create table commentext as 
+	select id, locationIP, browserUsed, length from fdwComment;
 
 -- Organization
 \set file_name :source_path/organisation_0_0.csv

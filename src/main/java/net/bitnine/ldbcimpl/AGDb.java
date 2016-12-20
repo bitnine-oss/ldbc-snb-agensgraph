@@ -1326,9 +1326,6 @@ public class AGDb extends Db {
             JsonObject prop = new JsonObject();
             prop.put("id", ldbcUpdate6AddPost.postId());
             prop.put("creationdate", ldbcUpdate6AddPost.creationDate().getTime());
-            prop.put("locationip", ldbcUpdate6AddPost.locationIp());
-            prop.put("browserused", ldbcUpdate6AddPost.browserUsed());
-            prop.put("language", ldbcUpdate6AddPost.language());
             if (ldbcUpdate6AddPost.imageFile().length() > 0) {
                 prop.put("imagefile", ldbcUpdate6AddPost.imageFile());
             } else {
@@ -1338,6 +1335,11 @@ public class AGDb extends Db {
             prop.put("forumid", ldbcUpdate6AddPost.forumId());
             prop.put("place", ldbcUpdate6AddPost.countryId());
             client.execute(stmt, prop);
+
+            stmt = "insert into postext values (?, ?, ?, ?, ?)";
+            client.execute(stmt, ldbcUpdate6AddPost.postId(), ldbcUpdate6AddPost.locationIp(),
+                    ldbcUpdate6AddPost.browserUsed(), ldbcUpdate6AddPost.language(),
+                    ldbcUpdate6AddPost.length());
 
             stmt =  "MATCH (m:Post), (t:Tag) " +
                     "WHERE m.id::int8 = ? " +
@@ -1364,10 +1366,7 @@ public class AGDb extends Db {
             JsonObject prop = new JsonObject();
             prop.put("id", ldbcUpdate7AddComment.commentId());
             prop.put("creationdate", ldbcUpdate7AddComment.creationDate().getTime());
-            prop.put("locationip", ldbcUpdate7AddComment.locationIp());
-            prop.put("browserused", ldbcUpdate7AddComment.browserUsed());
             prop.put("content", ldbcUpdate7AddComment.content());
-            prop.put("length", ldbcUpdate7AddComment.length());
             prop.put("creator", ldbcUpdate7AddComment.authorPersonId());
             prop.put("place", ldbcUpdate7AddComment.countryId());
             if (ldbcUpdate7AddComment.replyToCommentId() != -1) {
@@ -1376,6 +1375,10 @@ public class AGDb extends Db {
                 prop.put("replyofpost", ldbcUpdate7AddComment.replyToPostId());
             }
             client.execute(stmt, prop);
+
+            stmt = "insert into commentext values (?, ?, ?, ?)";
+            client.execute(stmt, ldbcUpdate7AddComment.commentId(), ldbcUpdate7AddComment.locationIp(),
+                    ldbcUpdate7AddComment.browserUsed(), ldbcUpdate7AddComment.length());
 
             stmt = "MATCH (m:\"Comment\"), (t:Tag) " +
                     "WHERE m.id::int8 = ? " +

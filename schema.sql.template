@@ -576,7 +576,8 @@ create foreign table fdwKnows
 load from fdwKnows as row
 match (r:Person), (s:Person)
 where (r).id::int8 = (row).person1Id and (s).id::int8 = (row).person2Id
-create (r)-[:knows {'creationDate': (row).creationDate}]->(s);
+create (r)-[:knows {'creationDate': (row).creationDate}]->(s)
+create (s)-[:knows {'creationDate': (row).creationDate}]->(r);
 
 --- likes (post)
 \set file_name :source_path/person_likes_post_0_0.csv

@@ -78,7 +78,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState) dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery1.toString() +" \n" + 
-                    "MATCH (p:Person)-[path:knows*..3]-(friend:Person {'firstname': ?}) " +
+                    "MATCH (p:Person)-[path:knows*..3]->(friend:Person {'firstname': ?}) " +
                     "WHERE p.id::int8 = ? " +
                     "WITH friend, min(array_length(path, 1)) AS distance " +
                     "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
@@ -167,7 +167,7 @@ public class AGDb extends Db {
             String stmt = 
                     " /*+ IndexScan (message) IndexScan(post) IndexScan(\"Comment\") */ " + 
                     "-- " + ldbcQuery2.toString() +" \n" + 
-                    "MATCH (p:Person)-[:knows]-(friend:Person), (message:Message) " +
+                    "MATCH (p:Person)-[:knows]->(friend:Person), (message:Message) " +
                     "WHERE p.id::int8 = ? AND message.creationDate::int8 <= ? " +
                     "  AND friend.id::int8 = message.creator::int8 " +
                     "RETURN " +
@@ -209,7 +209,7 @@ public class AGDb extends Db {
 
             String stmt = 
                     "-- " + ldbcQuery3.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows*..2]-(friend:Person) " +
+                    "MATCH (person:Person)-[:knows*..2]->(friend:Person) " +
                     "WHERE " +
                     "  person.id::int8 = ?  " +
                     "  AND id(person) <> id(friend) " +
@@ -292,7 +292,7 @@ public class AGDb extends Db {
                           "        SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " +
                           "        FROM " +
                           "        ( " +
-                          "                MATCH (person:Person)-[:KNOWS]-(friend:Person), (post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "                MATCH (person:Person)-[:KNOWS]->(friend:Person), (post:Post)-[:hasTagPost]->(tag:Tag) " +
                           "                WHERE " +
                           "                person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
                           "                AND friend.id::int8 = post.creator::int8 " +
@@ -301,7 +301,7 @@ public class AGDb extends Db {
                           "        ) T1 " +
                           "        LEFT JOIN " +
                           "        ( " +
-                          "                MATCH (person:Person)-[:KNOWS]-(friend:Person), (post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "                MATCH (person:Person)-[:KNOWS]->(friend:Person), (post:Post)-[:hasTagPost]->(tag:Tag) " +
                           "                WHERE " +
                           "                person.id::int8 = ? AND post.creationDate::int8 < ? " +
                           "                AND friend.id::int8 = post.creator::int8 " +
@@ -341,7 +341,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery5.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
+                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
                     "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
                     "AND membership.\"joinDate\"::int8 > ? " +
                     "WITH DISTINCT friend.id::int8 AS friendId, forum.id::int8 AS forumId, forum.title AS forumTitle " +
@@ -379,7 +379,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery6.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
+                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
                     "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
                     "WITH DISTINCT friend.id::int8 AS friendId " +
                     "MATCH (friendPost:Post)-[:hasTagPost]->(knownTag:Tag) " +
@@ -436,7 +436,7 @@ public class AGDb extends Db {
                     "    ELSE latestLike->'msg'->>'imagefile'  " +
                     "  END AS messageContent,  " +
                     "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
-                    "  not exists((:Person {id: personId})-[:knows]-(:Person {id: otherId}))  " +
+                    "  not exists((:Person {id: personId})-[:knows]->(:Person {id: otherId}))  " +
                     "ORDER BY likeTime DESC, personId ASC  " +
                     "LIMIT " + ldbcQuery7.limit();
             ResultSet rs = client.executeQuery(stmt); //, ldbcQuery7.personId(), ldbcQuery7.limit());
@@ -504,7 +504,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery9.toString() +" \n" + 
-                    "MATCH (person:Person)-[:KNOWS*1..2]-(friend:Person) " +
+                    "MATCH (person:Person)-[:KNOWS*1..2]->(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "WITH DISTINCT" +
                     "   friend.id::int8 AS personId, " +
@@ -550,13 +550,13 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery10.toString() +" \n" +
-                    "MATCH (person:Person)-[:knows*2..2]-(friend:Person), (city:Place) " +
+                    "MATCH (person:Person)-[:knows*2..2]->(friend:Person), (city:Place) " +
                     "WHERE person.id::int8 = ? " +
                     "  AND friend.place::int8 = city.id::int8 " +
                     "  AND ((extract(month from to_timestamp(friend.birthday::int8 / 1000)) = ? AND extract(day from to_timestamp(friend.birthday::int8 / 1000)) >= 21) OR " +
                     "       (extract(month from to_timestamp(friend.birthday::int8 / 1000)) = (? % 12)+1 AND extract(day from to_timestamp(friend.birthday::int8 / 1000)) < 22)) " +
                     "  AND id(friend) <> id(person) " +
-                    "  AND not exists((friend)-[:knows]-(person)) " +
+                    "  AND not exists((friend)-[:knows]->(person)) " +
                     "WITH DISTINCT " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +
@@ -617,7 +617,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery11.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
+                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
                     "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
                     "WITH DISTINCT friend " +
                     "MATCH (friend)-[worksAt:workAt]->(company:Organization), (place:Place {'name': ?}) " +
@@ -658,7 +658,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery12.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows]-(friend:Person) " +
+                    "MATCH (person:Person)-[:knows]->(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "OPTIONAL MATCH " +
                     "  (c:\"Comment\"), (post:Post)-[:hasTagPost]->(tag:Tag), " +
@@ -912,7 +912,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcShortQuery3PersonFriends.toString() +" \n" + 
-                    "MATCH (person:Person)-[r:knows]-(friend:Person) " +
+                    "MATCH (person:Person)-[r:knows]->(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "RETURN " +
                     "  friend.id::int8 AS friendId, " +
@@ -1090,7 +1090,7 @@ public class AGDb extends Db {
                     "WHERE m.id::int8 = ? " +
                     "  AND (m.id::int8 = c.replyOfPost::int8 OR m.id::int8 = c.replyOfComment::int8) " +
                     "  AND (c.creator::int8 = p.id::int8) " +
-                    "OPTIONAL MATCH (m), (a:Person)-[r:knows]-(p) " +
+                    "OPTIONAL MATCH (m), (a:Person)-[r:knows]->(p) " +
                     "WHERE m.creator::int8 = a.id::int8 " +
                     "RETURN " +
                     "  c.id::int8 AS commentId, " +
@@ -1400,11 +1400,13 @@ public class AGDb extends Db {
 
             String stmt = "MATCH (p1:Person), (p2:Person) " +
                     "WHERE p1.id::int8 = ? AND p2.id::int8 = ? " +
-                    "CREATE (p1)-[:knows {'creationDate': ?}]->(p2)";
+                    "CREATE (p1)-[:knows {'creationDate': ?}]->(p2)" +
+                    "CREATE (p2)-[:knows {'creationDate': ?}]->(p1)" ;
 
             client.execute(stmt,
                     ldbcUpdate8AddFriendship.person1Id(),
                     ldbcUpdate8AddFriendship.person2Id(),
+                    ldbcUpdate8AddFriendship.creationDate(),
                     ldbcUpdate8AddFriendship.creationDate());
 
             client.commit();

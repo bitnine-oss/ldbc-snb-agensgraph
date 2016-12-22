@@ -420,15 +420,15 @@ create UNIQUE index on ldbc.tag (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.tagclass (((properties #>> '{id}'::text[])::int8));
 
 -- Analyze vertices
-analyze ldbc.forum;
-analyze ldbc.message;
-analyze ldbc.post;
-analyze ldbc."Comment";
-analyze ldbc.organization;
-analyze ldbc.person;
-analyze ldbc.place;
-analyze ldbc.tag;
-analyze ldbc.tagclass;
+VACUUM analyze ldbc.forum;
+VACUUM analyze ldbc.message;
+VACUUM analyze ldbc.post;
+VACUUM analyze ldbc."Comment";
+VACUUM analyze ldbc.organization;
+VACUUM analyze ldbc.person;
+VACUUM analyze ldbc.place;
+VACUUM analyze ldbc.tag;
+VACUUM analyze ldbc.tagclass;
 
 -- Edge
 
@@ -847,15 +847,15 @@ create unique index on ldbc.hasMember (
 --create index on ldbc.hasTagComment ("end");
 
 -- Analyze vertices
-analyze ldbc.forum;
-analyze ldbc.message;
-analyze ldbc.post;
-analyze ldbc."Comment";
-analyze ldbc.organization;
-analyze ldbc.person;
-analyze ldbc.place;
-analyze ldbc.tag;
-analyze ldbc.tagclass;
+VACUUM analyze ldbc.forum;
+VACUUM analyze ldbc.message;
+VACUUM analyze ldbc.post;
+VACUUM analyze ldbc."Comment";
+VACUUM analyze ldbc.organization;
+VACUUM analyze ldbc.person;
+VACUUM analyze ldbc.place;
+VACUUM analyze ldbc.tag;
+VACUUM analyze ldbc.tagclass;
 
 -- Analyze edges 
 VACUUM analyze ldbc.hasMember;

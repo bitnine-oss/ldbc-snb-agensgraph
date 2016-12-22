@@ -156,7 +156,7 @@ create foreign table fdwForum
 		 FILENAME :'file_name'
 	);
 load from fdwForum as row
-create (:Forum =row_to_json(row)::jsonb);
+create (:Forum =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Message
 
@@ -193,7 +193,7 @@ create view PostBase AS
  	select id, creationDate, imageFile, content, creator, forumID, place
 	from fdwPost;
 load from PostBase as row
-create (:Post =row_to_json(row)::jsonb);
+create (:Post =jsonb_strip_nulls(row_to_json(row)::jsonb));
 drop table postext;
 create table postext as 
 	select id, locationIP, browserUsed, language, length from fdwPost;
@@ -230,7 +230,7 @@ create view CommentBase AS
  	select id, creationDate, content, creator, place, replyofpost, replyOfComment
 	from fdwComment;
 load from CommentBase as row
-create (:"Comment" =row_to_json(row)::jsonb);
+create (:"Comment" =jsonb_strip_nulls(row_to_json(row)::jsonb));
 drop table commentext;
 create table commentext as 
 	select id, locationIP, browserUsed, length from fdwComment;
@@ -258,7 +258,7 @@ create foreign table fdwOrganization
 		 FILENAME :'file_name'
 	);
 load from fdwOrganization as row
-create (:Organization =row_to_json(row)::jsonb);
+create (:Organization =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Person
 drop view person_view;
@@ -338,7 +338,7 @@ create view person_view as (
 );
 
 load from person_view as row
-create (:Person =row_to_json(row)::jsonb);
+create (:Person =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Place
 \set file_name :source_path/place_0_0.csv
@@ -363,7 +363,7 @@ create foreign table fdwPlace
 		 FILENAME :'file_name'
 	);
 load from fdwPlace as row
-create (:Place =row_to_json(row)::jsonb);
+create (:Place =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Tag
 \set file_name :source_path/tag_0_0.csv
@@ -386,7 +386,7 @@ create foreign table fdwTag
 		 FILENAME :'file_name'
 	);
 load from fdwTag as row
-create (:Tag =row_to_json(row)::jsonb);
+create (:Tag =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- TagClass
 \set file_name :source_path/tagclass_0_0.csv
@@ -409,7 +409,7 @@ create foreign table fdwTagClass
 		 FILENAME :'file_name'
 	);
 load from fdwTagClass as row
-create (:TagClass =row_to_json(row)::jsonb);
+create (:TagClass =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Make property indexes for 'id' field of vertexes
 --- should be replaced to using CREATE PROPERTY INDEX
@@ -434,15 +434,15 @@ create UNIQUE index on ldbc.tag (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.tagclass (((properties #>> '{id}'::text[])::int8));
 
 -- Analyze vertices
-analyze ldbc.forum;
-analyze ldbc.message;
-analyze ldbc.post;
-analyze ldbc."Comment";
-analyze ldbc.organization;
-analyze ldbc.person;
-analyze ldbc.place;
-analyze ldbc.tag;
-analyze ldbc.tagclass;
+VACUUM analyze ldbc.forum;
+VACUUM analyze ldbc.message;
+VACUUM analyze ldbc.post;
+VACUUM analyze ldbc."Comment";
+VACUUM analyze ldbc.organization;
+VACUUM analyze ldbc.person;
+VACUUM analyze ldbc.place;
+VACUUM analyze ldbc.tag;
+VACUUM analyze ldbc.tagclass;
 
 -- Edge
 
@@ -861,15 +861,15 @@ create unique index on ldbc.hasMember (
 --create index on ldbc.hasTagComment ("end");
 
 -- Analyze vertices
-analyze ldbc.forum;
-analyze ldbc.message;
-analyze ldbc.post;
-analyze ldbc."Comment";
-analyze ldbc.organization;
-analyze ldbc.person;
-analyze ldbc.place;
-analyze ldbc.tag;
-analyze ldbc.tagclass;
+VACUUM analyze ldbc.forum;
+VACUUM analyze ldbc.message;
+VACUUM analyze ldbc.post;
+VACUUM analyze ldbc."Comment";
+VACUUM analyze ldbc.organization;
+VACUUM analyze ldbc.person;
+VACUUM analyze ldbc.place;
+VACUUM analyze ldbc.tag;
+VACUUM analyze ldbc.tagclass;
 
 -- Analyze edges 
 VACUUM analyze ldbc.hasMember;

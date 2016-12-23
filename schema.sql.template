@@ -169,7 +169,7 @@ drop foreign table fdwPost;
 create foreign table fdwPost 
 	(
 		id int8, 
-		imageFile varchar(80),
+        imageFile varchar(80),
 		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80),
@@ -194,9 +194,10 @@ create view PostBase AS
 	from fdwPost;
 load from PostBase as row
 create (:Post =jsonb_strip_nulls(row_to_json(row)::jsonb));
-drop table postext;
-create table postext as 
-	select id, locationIP, browserUsed, language, length from fdwPost;
+drop table msgext;
+create table msgext as
+	select id, locationIP, browserUsed, language, length, content, imagefile
+	from fdwPost;
 
 --- Comment (inherits Message)
 \set file_name :source_path/comment_0_0.csv
@@ -231,9 +232,11 @@ create view CommentBase AS
 	from fdwComment;
 load from CommentBase as row
 create (:"Comment" =jsonb_strip_nulls(row_to_json(row)::jsonb));
-drop table commentext;
-create table commentext as 
-	select id, locationIP, browserUsed, length from fdwComment;
+insert into msgext
+	select id, locationIP, browserUsed, null, length, content, null
+	from fdwComment;
+
+create unique index msgext_idx on msgext (id);
 
 -- Organization
 \set file_name :source_path/organisation_0_0.csv

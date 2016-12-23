@@ -170,18 +170,25 @@ public class AGDb extends Db {
                     "MATCH (p:Person)-[:knows]->(friend:Person), (message:Message) " +
                     "WHERE p.id::int8 = ? AND message.creationDate::int8 <= ? " +
                     "  AND friend.id::int8 = message.creator::int8 " +
-                    "RETURN " +
+                    "WITH " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +
                     "  friend.lastName AS personLastName, " +
                     "  message.id::int8 AS messageId, " +
-                    "  CASE message.content is not null " +
-                    "    WHEN true THEN message.content " +
-                    "    ELSE message.imageFile " +
-                    "  END AS messageContent, " +
                     "  message.creationDate::int8 AS messageCreationDate " +
                     "ORDER BY messageCreationDate DESC, messageId::int8 ASC " +
-                    "LIMIT ?";
+                    "LIMIT ? " +
+                    "RETURN " +
+                    "  personId, " +
+                    "  personFirstName, " +
+                    "  personLastName, " +
+                    "  messageId, " +
+                    "  (SELECT CASE me.content is not null " +
+                    "    WHEN true THEN me.content " +
+                    "    ELSE me.imageFile " +
+                    "  END FROM msgext me WHERE me.id = messageId) AS messageContent, " +
+                    "  messageCreationDate " +
+                    "ORDER BY messageCreationDate DESC, messageId ASC ";
 
             ResultSet rs = client.executeQuery(stmt, ldbcQuery2.personId(), ldbcQuery2.maxDate(), ldbcQuery2.limit());
 
@@ -425,20 +432,29 @@ public class AGDb extends Db {
                     "  liker.lastName AS personLastName, " +
                     "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', l.\"creationDate\"::int8, 'id', message.id::int8))) AS latestLike,  " +
                     "  person.id::int8 AS otherId " +
+                    "WITH  " +
+                    "  personId,  " +
+                    "  personFirstName,  " +
+                    "  personLastName,  " +
+                    "  (latestLike->>'likeTime')::int8 AS likeTime, " +
+                    "  (latestLike->'msg'->>'id')::int8 AS messageId, " +
+                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
+                    "  not exists((:Person {id: personId})-[:knows]->(:Person {id: otherId})) isknow " +
+                    "ORDER BY likeTime DESC, personId ASC " +
+                    "LIMIT " + ldbcQuery7.limit() + " " +
                     "RETURN  " +
                     "  personId,  " +
                     "  personFirstName,  " +
                     "  personLastName,  " +
-                    "  (latestLike->>'likeTime')::int8 AS likeTime,  " +
-                    "  (latestLike->'msg'->>'id')::int8 AS messageId,  " +
-                    "  CASE latestLike->'msg'->>'content' is not null  " +
-                    "    WHEN true THEN latestLike->'msg'->>'content'  " +
-                    "    ELSE latestLike->'msg'->>'imagefile'  " +
-                    "  END AS messageContent,  " +
-                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
-                    "  not exists((:Person {id: personId})-[:knows]->(:Person {id: otherId}))  " +
-                    "ORDER BY likeTime DESC, personId ASC  " +
-                    "LIMIT " + ldbcQuery7.limit();
+                    "  likeTime,  " +
+                    "  messageId,  " +
+                    "  (SELECT CASE me.content is not null  " +
+                    "    WHEN true THEN me.content " +
+                    "    ELSE me.imagefile  " +
+                    "  END FROM msgext me WHERE me.id = messageId)AS messageContent,  " +
+                    "  latency,  " +
+                    "  isknow " +
+                    "ORDER BY likeTime DESC, personId ASC  ";
             ResultSet rs = client.executeQuery(stmt); //, ldbcQuery7.personId(), ldbcQuery7.limit());
             List<LdbcQuery7Result> resultList = new ArrayList<>();
             try {
@@ -470,15 +486,20 @@ public class AGDb extends Db {
                     "  AND p.id::int8 = m.creator::int8 " +
                     "  AND (m.id::int8 = c.replyOfPost::int8 OR m.id::int8 = c.replyOfComment::int8) " +
                     "  AND c.creator::int8 = person.id::int8 " +
+                    "WITH " +
+                    "  person, " +
+                    "  c.creationDate::int8 AS commentCreationDate, " +
+                    "  c.id::int8 AS commentId " +
+                    "ORDER BY commentCreationDate DESC, commentId ASC " +
+                    "LIMIT ? " +
                     "RETURN " +
                     "  person.id::int8 AS personId, " +
                     "  person.firstName AS personFirstName, " +
                     "  person.lastName AS personLastName, " +
-                    "  c.creationDate::int8 AS commentCreationDate, " +
-                    "  c.id::int8 AS commentId, " +
-                    "  c.content AS commentContent " +
-                    "ORDER BY commentCreationDate DESC, commentId ASC " +
-                    "LIMIT ?";
+                    "  commentCreationDate, " +
+                    "  commentId, " +
+                    "  (SELECT me.content FROM msgext me WHERE me.id = commentId) AS commentContent " +
+                    "ORDER BY commentCreationDate DESC, commentId ASC ";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery8.personId(), ldbcQuery8.limit());
 
             List<LdbcQuery8Result> resultList = new ArrayList<>();
@@ -511,18 +532,23 @@ public class AGDb extends Db {
                     "   friend.firstName AS personFirstName, " +
                     "   friend.lastName AS personLastName " +
                     "MATCH (message:Message) " +
-                    " WHERE message.creationDate::int8 < ? " +
-                    "   AND message.creator::int8 = personId " +
-                    " RETURN " +
-                    "   personId, personFirstName, personLastName, " +
-                    "   message.id::int8 AS messageId, " +
-                    "   CASE message.content is not null " +
-                    "     WHEN true THEN message.content " +
-                    "     ELSE message.imageFile " +
-                    "   END AS messageContent, " +
-                    "   message.creationDate::int8 AS messageCreationDate " +
-                    " ORDER BY messageCreationDate DESC, messageId ASC " +
-                    " LIMIT ?" ;
+                    "WHERE message.creationDate::int8 < ? " +
+                    "  AND message.creator::int8 = personId " +
+                    "WITH " +
+                    "  personId, personFirstName, personLastName, " +
+                    "  message.id::int8 AS messageId, " +
+                    "  message.creationDate::int8 AS messageCreationDate " +
+                    "ORDER BY messageCreationDate DESC, messageId ASC " +
+                    "LIMIT ? " +
+                    "RETURN " +
+                    "  personId, personFirstName, personLastName, " +
+                    "  messageId, " +
+                    "  (SELECT CASE me.content is not null " +
+                    "    WHEN true THEN me.content " +
+                    "    ELSE me.imageFile " +
+                    "  END FROM msgext me WHERE me.id = messageId) AS messageContent, " +
+                    "  messageCreationDate " +
+                    " ORDER BY messageCreationDate DESC, messageId ASC ";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery9.personId(), ldbcQuery9.maxDate(),
                     ldbcQuery9.limit());
 
@@ -833,13 +859,12 @@ public class AGDb extends Db {
             client.execute("set enable_hashjoin = off");
             client.execute("set enable_mergejoin = off");
             String stmt = "-- " + ldbcShortQuery2PersonPosts.toString() +" \n" + 
-                    "WITH RECURSIVE replyof (id, replyOfPost, replyOfComment, content, imageFile, creationDate) AS ( " +
+                    "WITH RECURSIVE replyof (id, replyOfPost, replyOfComment, creationDate) AS ( " +
                     "		SELECT * " +
                     "		FROM ( " +
                     "           SELECT (p.properties->>'id')::int8," +
-                    "                  (p.properties->>'id')::int8, NULL::int8, " +
-                    "                  (p.properties->>'content'), " +
-                    "                  (p.properties->>'imagefile'), " +
+                    "                  (p.properties->>'id')::int8," +
+                    "                  NULL::int8, " +
                     "                  (p.properties->>'creationdate')::int8 " +
                     "           FROM ldbc.post p " +
                     "           WHERE (p.properties #>> ARRAY['creator'::text])::int8 = ? " +
@@ -847,8 +872,6 @@ public class AGDb extends Db {
                     "           SELECT (c.properties->>'id')::int8, " +
                     "                  (c.properties->>'replyofpost')::int8," +
                     "                  (c.properties->>'replyofcomment')::int8, " +
-                    "                  (c.properties->>'content'), " +
-                    "                  (c.properties->>'imagefile'), " +
                     "                  (c.properties->>'creationdate')::int8 " +
                     "			FROM ldbc.\"Comment\" c " +
                     "			WHERE (c.properties #>> ARRAY['creator'::text])::int8 = ? " +
@@ -856,17 +879,17 @@ public class AGDb extends Db {
                     "		UNION ALL " +
                     "		SELECT r.id, (c.properties->>'replyofpost')::int8, " +
                     "              (c.properties->>'replyofcomment')::int8, " +
-                    "              r.content, r.imageFile, r.creationDate " +
+                    "              r.creationDate " +
                     "		FROM replyof r, ldbc.\"Comment\" c " +
                     "		WHERE r.replyOfComment = (c.properties #>> '{id}'::text[])::int8 " +
                     "		  AND r.replyOfComment IS NOT NULL " +
                     ") " +
                     "SELECT " +
                     "  m.id as messageId, " +
-                    "  CASE m.content is not null " +
-                    "    WHEN true THEN m.content " +
-                    "    ELSE m.imageFile " +
-                    "  END AS messageContent, " +
+                    "  (SELECT CASE me.content is not null " +
+                    "    WHEN true THEN me.content " +
+                    "    ELSE me.imageFile " +
+                    "  END FROM msgext me WHERE me.id = m.id)AS messageContent, " +
                     "  m.creationDate::int8 AS messageCreationDate, " +
                     "  (p.properties->>'id')::int8 AS originalPostId, " +
                     "  (creator.properties->>'id')::int8 AS originalPostAuthorId, " +
@@ -951,10 +974,10 @@ public class AGDb extends Db {
                     "MATCH (m:Message) " +
                     "WHERE m.id::int8 = ? " +
                     "RETURN " +
-                    "  CASE m.content is not null " +
-                    "    WHEN true THEN m.content " +
-                    "    ELSE m.imageFile " +
-                    "  END AS content, " +
+                    "  (SELECT CASE me.content is not null " +
+                    "    WHEN true THEN me.content " +
+                    "    ELSE me.imageFile " +
+                    "  END FROM msgext me WHERE me.id = m.id::int8) AS content, " +
                     "  m.creationDate::int8 as creationDate";
             ResultSet rs = client.executeQuery(stmt, ldbcShortQuery4MessageContent.messageId());
 
@@ -1017,13 +1040,12 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcShortQuery6MessageForum.toString() +" \n" + 
-                    "WITH RECURSIVE replyof (id, replyOfPost, replyOfComment, content, imageFile, creationDate) AS ( " +
+                    "WITH RECURSIVE replyof (id, replyOfPost, replyOfComment, creationDate) AS ( " +
                     "		SELECT * " +
                     "		FROM ( " +
                     "           SELECT (p.properties->>'id')::int8," +
-                    "                  (p.properties->>'id')::int8, NULL::int8, " +
-                    "                  (p.properties->>'content'), " +
-                    "                  (p.properties->>'imagefile'), " +
+                    "                  (p.properties->>'id')::int8, " +
+                    "                  NULL::int8, " +
                     "                  (p.properties->>'creationdate')::int8 " +
                     "           FROM ldbc.post p " +
                     "           WHERE (p.properties #>> '{id}'::text[])::int8 = ? " +
@@ -1031,8 +1053,6 @@ public class AGDb extends Db {
                     "           SELECT (c.properties->>'id')::int8, " +
                     "                  (c.properties->>'replyofpost')::int8," +
                     "                  (c.properties->>'replyofcomment')::int8, " +
-                    "                  (c.properties->>'content'), " +
-                    "                  (c.properties->>'imagefile'), " +
                     "                  (c.properties->>'creationdate')::int8 " +
                     "			FROM ldbc.\"Comment\" c " +
                     "			WHERE (c.properties #>>'{id}'::text[])::int8 = ? " +
@@ -1040,7 +1060,7 @@ public class AGDb extends Db {
                     "		UNION ALL " +
                     "		SELECT r.id, (c.properties->>'replyofpost')::int8, " +
                     "              (c.properties->>'replyofcomment')::int8, " +
-                    "              r.content, r.imageFile, r.creationDate " +
+                    "              r.creationDate " +
                     "		FROM replyof r, ldbc.\"Comment\" c " +
                     "		WHERE r.replyOfComment = (c.properties #>>'{id}'::text[])::int8 " +
                     "		  AND r.replyOfComment IS NOT NULL " +
@@ -1094,7 +1114,7 @@ public class AGDb extends Db {
                     "WHERE m.creator::int8 = a.id::int8 " +
                     "RETURN " +
                     "  c.id::int8 AS commentId, " +
-                    "  c.content AS commentContent, " +
+                    "  (SELECT me.content FROM msgext me WHERE me.id = c.id::int8)AS commentContent, " +
                     "  c.creationDate::int8 AS commentCreationDate, " +
                     "  p.id::int8 AS replyAuthorId, " +
                     "  p.firstName AS replyAuthorFirstName, " +
@@ -1326,20 +1346,23 @@ public class AGDb extends Db {
             JsonObject prop = new JsonObject();
             prop.put("id", ldbcUpdate6AddPost.postId());
             prop.put("creationdate", ldbcUpdate6AddPost.creationDate().getTime());
-            if (ldbcUpdate6AddPost.imageFile().length() > 0) {
-                prop.put("imagefile", ldbcUpdate6AddPost.imageFile());
-            } else {
-                prop.put("content", ldbcUpdate6AddPost.content());
-            }
             prop.put("creator", ldbcUpdate6AddPost.authorPersonId());
             prop.put("forumid", ldbcUpdate6AddPost.forumId());
             prop.put("place", ldbcUpdate6AddPost.countryId());
             client.execute(stmt, prop);
 
-            stmt = "insert into postext values (?, ?, ?, ?, ?)";
+            String content = null;
+            String imagefile = null;
+            if (ldbcUpdate6AddPost.imageFile().length() > 0) {
+                imagefile =  ldbcUpdate6AddPost.imageFile();
+            } else {
+                content = ldbcUpdate6AddPost.content();
+            }
+
+            stmt = "insert into msgext values (?, ?, ?, ?, ?, ?, ?)";
             client.execute(stmt, ldbcUpdate6AddPost.postId(), ldbcUpdate6AddPost.locationIp(),
                     ldbcUpdate6AddPost.browserUsed(), ldbcUpdate6AddPost.language(),
-                    ldbcUpdate6AddPost.length());
+                    ldbcUpdate6AddPost.length(), content, imagefile);
 
             stmt =  "MATCH (m:Post), (t:Tag) " +
                     "WHERE m.id::int8 = ? " +
@@ -1366,7 +1389,6 @@ public class AGDb extends Db {
             JsonObject prop = new JsonObject();
             prop.put("id", ldbcUpdate7AddComment.commentId());
             prop.put("creationdate", ldbcUpdate7AddComment.creationDate().getTime());
-            prop.put("content", ldbcUpdate7AddComment.content());
             prop.put("creator", ldbcUpdate7AddComment.authorPersonId());
             prop.put("place", ldbcUpdate7AddComment.countryId());
             if (ldbcUpdate7AddComment.replyToCommentId() != -1) {
@@ -1376,9 +1398,10 @@ public class AGDb extends Db {
             }
             client.execute(stmt, prop);
 
-            stmt = "insert into commentext values (?, ?, ?, ?)";
+            stmt = "insert into msgext values (?, ?, ?, null, ?, ?, null)";
             client.execute(stmt, ldbcUpdate7AddComment.commentId(), ldbcUpdate7AddComment.locationIp(),
-                    ldbcUpdate7AddComment.browserUsed(), ldbcUpdate7AddComment.length());
+                    ldbcUpdate7AddComment.browserUsed(), ldbcUpdate7AddComment.length(),
+                    ldbcUpdate7AddComment.content());
 
             stmt = "MATCH (m:\"Comment\"), (t:Tag) " +
                     "WHERE m.id::int8 = ? " +

@@ -865,33 +865,39 @@ create unique index on ldbc.hasMember (
 
 -- pre_eval weights
 DROP TABLE c14_weight;
-CREATE TABLE c14_weight(p1 int8, p2 int8, weight double precision);
-CREATE UNIQUE INDEX ON c14_weight(p1, p2);
+CREATE UNLOGGED TABLE c14_weight(p1 int8, p2 int8, weight double precision);
 INSERT INTO c14_weight
-	SELECT p1, p2, SUM(inc) FROM (
-		SELECT
-			CASE when rep_creator < org_creator
-				THEN rep_creator ELSE org_creator END AS p1,
-			CASE when rep_creator < org_creator
-				THEN org_creator ELSE rep_creator END AS p2,
-			CASE WHEN org_is_post
-				THEN 1.0 ELSE 0.5 END AS inc
-		FROM (
-			MATCH (c:"Comment"), (m:Post)
-			WHERE c.replyOfPost::int8 = m.id::int8
-			RETURN c.creator::int8 AS rep_creator
-				 , m.creator::int8 AS org_creator
-				 , true AS org_is_post
-			UNION ALL
-			MATCH (c:"Comment"), (m:"Comment")
-			WHERE c.replyOfComment::int8 = m.id::int8
-			RETURN c.creator::int8 AS rep_creator
-				 , m.creator::int8 AS org_creator
-				 , false
-		) AS x
-		WHERE EXISTS ((:person {id: rep_creator})-[:knows]->(:person {id: org_creator}))
-	) AS x
-	GROUP BY p1, p2;
+    SELECT p1, p2, SUM(inc) FROM (
+        SELECT
+            CASE when rep_creator < org_creator
+                THEN rep_creator ELSE org_creator END AS p1,
+            CASE when rep_creator < org_creator
+                THEN org_creator ELSE rep_creator END AS p2,
+            inc
+        FROM (
+            MATCH (c:"Comment"), (m:Post)
+            WHERE c.replyOfPost::int8 = m.id::int8
+            RETURN c.creator::int8 AS rep_creator
+                 , m.creator::int8 AS org_creator
+                 , 1.0 AS inc
+            UNION ALL
+            MATCH (c:"Comment"), (m:"Comment")
+            WHERE c.replyOfComment::int8 = m.id::int8
+            RETURN c.creator::int8 AS rep_creator
+                 , m.creator::int8 AS org_creator
+                 , 0.5
+        ) AS x,
+		lateral (
+			SELECT * FROM (
+			MATCH (p:Person)-[:knows]->(f:Person)
+			WHERE p.id::int8 = rep_creator AND f.id::int8 = org_creator
+			RETURN 1 AS b
+			) AS dummy
+		) p
+    ) AS x
+    GROUP BY p1, p2;
+CREATE UNIQUE INDEX ON c14_weight(p1, p2);
+ALTER TABLE c14_weight SET LOGGED;
 
 -- Analyze vertices
 VACUUM analyze ldbc.forum;

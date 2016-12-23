@@ -41,53 +41,139 @@ returns int8 as $$
 				  where post.id::int8 = x.id and p.id::int8 = person_id return 1) y);
 $$ language sql;
 
-create or replace function calc_weight(node_ids int8[])
+create or replace function upd_reply_weight (p1id bigint, postid bigint, commentid bigint)
+returns int as $$
+declare
+	p2id int8;
+	tmp int8;
+	reply int8;
+  	inc double precision;
+begin
+	match (m:message)
+	where m.id::int8 = postid + commentid + 1
+	return m.creator::int8 into p2id;
+	if not found then
+		return 0;
+	end if;
+	if postid <> -1 then
+		inc := 1;
+ 	else
+ 		inc := 0.5;
+	end if;
+  	if p1id > p2id then
+		tmp := p2id;
+		p2id := p1id;
+		p1id := tmp;
+	end if;
+  	if not exists ((:person {id: p1id})-[:knows]->(:person {id: p2id})) then
+		return 0;
+	end if;
+	if exists (select 1 from c14_weight where p1 = p1id and p2 = p2id for update) then
+    	update c14_weight set weight = weight + inc where p1 = p1id and p2 = p2id;
+	else
+    	insert into c14_weight values (p1id, p2id, inc);
+	end if;
+	return 1;
+end
+$$ language plpgsql;
+
+create or replace function upd_weight(p1 int8, p2 int8)
 returns double precision as $$
 declare
-	weight double precision;
-	prev int8;
-	curr int8;
-	l1 int;
-	l2 int;
-	l3 int;
-	rowcount int;
+  a double precision;
+  b double precision;
+  c double precision;
+  d double precision;
 begin
-	set enable_bitmapscan = off;
-	weight := 0.0;
+	SELECT SUM(1.0) INTO a
+	FROM (SELECT 1
+	FROM (
+		MATCH (c:"Comment"), (m:Post)
+		WHERE c.replyOfPost::int8 = m.id::int8
+		  AND c.creator::int8 = p1
+		  AND m.creator::int8 = p2
+		RETURN 1 AS col1) AS dummy
+	FOR UPDATE) AS dummy;
+
+	SELECT SUM(1.0) INTO b
+	FROM (SELECT 1
+	FROM (
+		MATCH (c:"Comment"), (m:Post)
+		WHERE c.replyOfComment::int8 = m.id::int8
+		  AND c.creator::int8 = p2
+		  AND m.creator::int8 = p1
+		RETURN 1 AS col1) AS dummy
+	FOR UPDATE) AS dummy;
+
+	SELECT SUM(0.5) INTO c
+	FROM (SELECT 1
+	FROM (
+		MATCH (c:"Comment"), (m:"Comment")
+		WHERE c.replyOfPost::int8 = m.id::int8
+		  AND c.creator::int8 = p1
+		  AND m.creator::int8 = p2
+		RETURN 1 AS col1) AS dummy
+	FOR UPDATE) AS dummy;
+
+	SELECT SUM(0.5) INTO d
+	FROM (SELECT 1
+	FROM (
+		MATCH (c:"Comment"), (m:"Comment")
+		WHERE c.replyOfComment::int8 = m.id::int8
+		  AND c.creator::int8 = p2
+		  AND m.creator::int8 = p1
+		RETURN 1 AS col1) AS dummy
+	FOR UPDATE) AS dummy;
+
+	return coalesce(a, 0) + coalesce(b, 0) + coalesce(c, 0) + coalesce(d);
+end
+$$ language plpgsql;
+
+create or replace function add_weight (p1 int8, p2 int8)
+returns int as $$
+declare
+	cw double precision;
+begin
+ 	cw := upd_weight(p1, p2);
+	if cw > 0.0 then
+		if p1 < p2 then
+			insert into c14_weight values (p1, p2, cw);
+		else
+			insert into c14_weight values (p1, p2, cw);
+		end if;
+	end if;
+	return 1;
+end
+$$ language plpgsql;
+
+create or replace function get_weight (node_ids int8[])
+returns double precision as $$
+declare
+	all_weight double precision;
+	small_ids int8[];
+	big_ids int8[];
+	small int8;
+	big int8;
+	tmp int8;
+begin
+	all_weight := 0.0;
 	for i in 1..array_length(node_ids, 1) - 1 loop
-		prev := node_ids[i];
-		curr := node_ids[i+1];
-
-		match (c:"Comment"), (p:Post)
-		where c.creator::int8 = curr and p.creator::int8 = prev
-		  and c.replyOfPost::int8 = p.id::int8
-		return count(*)
-		into l1;
-
-		match (c:"Comment"), (p:Post)
-		where c.creator::int8 = prev and p.creator::int8 = curr
-		  and c.replyOfPost::int8 = p.id::Int8
-		return count(*)
-		into l2;
-
-		select sum(cnt) into l3 from (
-		  select cnt from (
-		    match (c1:"Comment"), (c2:"Comment")
-		    where c1.creator::int8 = prev and c2.creator::int8 = curr
-			  and c1.replyOfComment::int8 = c2.id::int8
-		    return count(*) as cnt) as l
-		  union all
-		  select cnt from (
-		    match (c1:"Comment"), (c2:"Comment")
-		    where c1.creator::int8 = curr and c2.creator::int8 = prev
-			  and c1.replyOfComment::int8 = c2.id::int8
-			return count(*) as cnt) as r) as uni;
-
-		weight := weight + l1 * 1.0 + l2 * 1.0 + l3 * 0.5;
+		small = node_ids[i];
+		big = node_ids[i+1];
+		if small > big then
+			tmp := small;
+			small := big;
+			big := tmp;
+		end if;
+		small_ids := array_append(small_ids, small);
+		big_ids := array_append(big_ids, big);
 	end loop;
-	set enable_bitmapscan = on;
-
-	return weight;
+	raise notice 'small_ids(%)', small_ids;
+	raise notice 'big_ids(%)', big_ids;
+	select sum((select weight
+			from c14_weight where p1 = s and p2 = b)) into all_weight
+	from unnest(small_ids, big_ids) as x (s, b);
+	return all_weight;
 end
 $$ language plpgsql;
 
@@ -115,13 +201,13 @@ DECLARE
 BEGIN
     -- Create a temporary table for storing the estimates as the algorithm runs
     CREATE TEMP TABLE inter_result1
-    (   
+    (
         nid graphid,
         path graphid[]
     ) ON COMMIT DROP;
 
-    CREATE TEMP TABLE inter_result2 
-    (   
+    CREATE TEMP TABLE inter_result2
+    (
         nid graphid,
         path graphid[]
     ) ON COMMIT DROP;
@@ -132,22 +218,22 @@ BEGIN
     -- Run the algorithm until we decide that we are finished
     LOOP
         IF iter % 2 = 0 THEN
-            INSERT INTO inter_result2 
+            INSERT INTO inter_result2
                 SELECT distinct e."end", i.path || e."end"
                 FROM ldbc.knows AS e, inter_result1 AS i
                 WHERE nid = e.start AND e."end" = endnode;
         ELSE
-            INSERT INTO inter_result1 
+            INSERT INTO inter_result1
                 SELECT distinct e."end", i.path || e."end"
                 FROM ldbc.knows AS e, inter_result2 AS i
                 WHERE nid = e.start AND e."end" = endnode;
-        END IF; 
+        END IF;
 
         GET DIAGNOSTICS rowcount = ROW_COUNT;
-        IF rowcount != 0 THEN EXIT; END IF; 
+        IF rowcount != 0 THEN EXIT; END IF;
 
         IF iter % 2 = 0 THEN
-            INSERT INTO inter_result2 
+            INSERT INTO inter_result2
                 SELECT distinct e."end", i.path || e."end"
                 FROM ldbc.knows AS e, inter_result1 AS i
 				WHERE nid = e.start AND NOT (i.path @> array[e."end"]);
@@ -187,7 +273,7 @@ declare
 	pid int8;
 	ret int8[];
 begin
-	foreach gid in array graphids 
+	foreach gid in array graphids
 	loop
 		match (p:Person) where id(p) = gid return p.id::int8 into pid;
 		ret := array_append(ret, pid);

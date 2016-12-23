@@ -765,7 +765,7 @@ public class AGDb extends Db {
             String stmt = "-- " + ldbcQuery14.toString() +" \n" + 
                     "SELECT " +
                     "  extract_ids(vertex_ids) AS pathNodeIds, " +
-                    "  calc_weight(vertex_ids) AS weight " +
+                    "  get_weight(vertex_ids) AS weight " +
                     "FROM allshortestpath_vertex_ids(?, ?) " +
                     "ORDER BY weight DESC";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery14.person1Id(), ldbcQuery14.person2Id());
@@ -1398,6 +1398,11 @@ public class AGDb extends Db {
             }
             client.execute(stmt, prop);
 
+            client.executeQuery("SELECT upd_reply_weight(?, ?, ?)",
+                    ldbcUpdate7AddComment.authorPersonId(),
+                    ldbcUpdate7AddComment.replyToPostId(),
+                    ldbcUpdate7AddComment.replyToCommentId());
+
             stmt = "insert into msgext values (?, ?, ?, null, ?, ?, null)";
             client.execute(stmt, ldbcUpdate7AddComment.commentId(), ldbcUpdate7AddComment.locationIp(),
                     ldbcUpdate7AddComment.browserUsed(), ldbcUpdate7AddComment.length(),
@@ -1434,6 +1439,10 @@ public class AGDb extends Db {
                     ldbcUpdate8AddFriendship.person2Id(),
                     ldbcUpdate8AddFriendship.creationDate(),
                     ldbcUpdate8AddFriendship.creationDate());
+
+            client.executeQuery("SELECT add_weight(?, ?)",
+                    ldbcUpdate8AddFriendship.person1Id(),
+                    ldbcUpdate8AddFriendship.person2Id());
 
             client.commit();
             resultReporter.report(0, LdbcNoResult.INSTANCE, ldbcUpdate8AddFriendship);

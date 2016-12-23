@@ -139,15 +139,15 @@ drop index ldbc.isSubclassOf_properties_idx;
 \echo Start Loading :file_name
 
 drop foreign table fdwForum;
-create foreign table fdwForum 
+create foreign table fdwForum
 	(
-		id int8, 
-		title varchar(256), 
+		id int8,
+		title varchar(256),
 		creationDate int8,
 		moderator int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -166,9 +166,9 @@ create (:Forum =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 drop view PostBase;
 drop foreign table fdwPost;
-create foreign table fdwPost 
+create foreign table fdwPost
 	(
-		id int8, 
+		id int8,
         imageFile varchar(80),
 		creationDate int8,
 		locationIP varchar(80),
@@ -181,7 +181,7 @@ create foreign table fdwPost
 		place int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -205,9 +205,9 @@ create table msgext as
 
 drop view CommentBase;
 drop foreign table fdwComment;
-create foreign table fdwComment 
+create foreign table fdwComment
 	(
-		id int8, 
+		id int8,
 		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80),
@@ -219,7 +219,7 @@ create foreign table fdwComment
 		replyOfComment int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -243,16 +243,16 @@ create unique index msgext_idx on msgext (id);
 \echo Start Loading :file_name
 
 drop foreign table fdwOrganization;
-create foreign table fdwOrganization 
+create foreign table fdwOrganization
 	(
-		id int8, 
+		id int8,
 		type varchar(80),
 		name varchar(200),
 		url varchar(200),
 		place int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -270,9 +270,9 @@ drop view person_view;
 \echo Start Loading :file_name
 
 drop foreign table fdwPerson;
-create foreign table fdwPerson 
+create foreign table fdwPerson
 (
-	id int8, 
+	id int8,
 	firstName varchar(80),
 	lastName varchar(80),
 	gender varchar(6),
@@ -283,7 +283,7 @@ create foreign table fdwPerson
 	place int8
 )
 server graph_import
-options 
+options
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -297,13 +297,13 @@ options
 \echo Start Loading :file_name
 
 drop foreign table fdwEmail;
-create foreign table fdwEmail 
+create foreign table fdwEmail
 (
-	id int8, 
+	id int8,
 	email varchar(200)
 )
 server graph_import
-options 
+options
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -317,13 +317,13 @@ options
 \echo Start Loading :file_name
 
 drop foreign table fdwLanguage;
-create foreign table fdwLanguage 
+create foreign table fdwLanguage
 (
-	id int8, 
+	id int8,
 	language varchar(200)
 )
 server graph_import
-options 
+options
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -348,16 +348,16 @@ create (:Person =jsonb_strip_nulls(row_to_json(row)::jsonb));
 \echo Start Loading :file_name
 
 drop foreign table fdwPlace;
-create foreign table fdwPlace 
+create foreign table fdwPlace
 	(
-		id int8, 
+		id int8,
 		name varchar(200),
 		url varchar(200),
 		type varchar(80),
 		isPartOf int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -373,14 +373,14 @@ create (:Place =jsonb_strip_nulls(row_to_json(row)::jsonb));
 \echo Start Loading :file_name
 
 drop foreign table fdwTag;
-create foreign table fdwTag 
+create foreign table fdwTag
 	(
-		id int8, 
+		id int8,
 		name varchar(200),
 		url varchar(200)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -396,14 +396,14 @@ create (:Tag =jsonb_strip_nulls(row_to_json(row)::jsonb));
 \echo Start Loading :file_name
 
 drop foreign table fdwTagClass;
-create foreign table fdwTagClass 
+create foreign table fdwTagClass
 	(
-		id int8, 
+		id int8,
 		name varchar(200),
 		url varchar(200)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -426,7 +426,7 @@ create (:TagClass =jsonb_strip_nulls(row_to_json(row)::jsonb));
 --create PROPERTY index on place (id);
 --create PROPERTY index on tag (id);
 --create PROPERTY index on tagclass (id);
-create UNIQUE index on ldbc.forum (((properties #>> '{id}'::text[])::int8));      
+create UNIQUE index on ldbc.forum (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.message (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.post (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc."Comment" (((properties #>> '{id}'::text[])::int8));
@@ -456,12 +456,12 @@ VACUUM analyze ldbc.tagclass;
 drop foreign table fdwHasMember;
 create foreign table fdwHasMember
 	(
-		forumId int8, 
+		forumId int8,
 		personId int8,
 		joinDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -481,11 +481,11 @@ create (r)-[:hasMember {'joinDate': (row).joinDate}]->(s);
 drop foreign table fdwPostHasTag;
 create foreign table fdwPostHasTag
 	(
-		postId int8, 
+		postId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -505,11 +505,11 @@ create (r)-[:hasTagPost]->(s);
 drop foreign table fdwCommentHasTag;
 create foreign table fdwCommentHasTag
 	(
-		commentId int8, 
+		commentId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -529,11 +529,11 @@ create (r)-[:hasTagComment]->(s);
 drop foreign table fdwForumHasTag;
 create foreign table fdwForumHasTag
 	(
-		forumId int8, 
+		forumId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -553,11 +553,11 @@ create (r)-[:hasTagForum]->(s);
 drop foreign table fdwHasInterest;
 create foreign table fdwHasInterest
 	(
-		personId int8, 
+		personId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -577,12 +577,12 @@ create (r)-[:hasInterest]->(s);
 drop foreign table fdwKnows;
 create foreign table fdwKnows
 	(
-		person1Id int8, 
+		person1Id int8,
 		person2Id int8,
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -603,12 +603,12 @@ create (s)-[:knows {'creationDate': (row).creationDate}]->(r);
 drop foreign table fdwLikesPost;
 create foreign table fdwLikesPost
 	(
-		personId int8, 
+		personId int8,
 		postId int8,
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -628,12 +628,12 @@ create (r)-[:likesPost {'creationDate': (row).creationDate}]->(s);
 drop foreign table fdwLikesComment;
 create foreign table fdwLikesComment
 	(
-		personId int8, 
+		personId int8,
 		commentId int8,
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -653,12 +653,12 @@ create (r)-[:likesComment {'creationDate': (row).creationDate}]->(s);
 drop foreign table fdwStudyAt;
 create foreign table fdwStudyAt
 	(
-		personId int8, 
+		personId int8,
 		organId int8,
 		classYear char(4)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -678,12 +678,12 @@ create (r)-[:studyAt {'classYear': (row).classYear}]->(s);
 drop foreign table fdwWorkAt;
 create foreign table fdwWorkAt
 	(
-		personId int8, 
+		personId int8,
 		organId int8,
 		workFrom char(4)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -703,11 +703,11 @@ create (r)-[:workAt {'workFrom': (row).workFrom}]->(s);
 drop foreign table fdwHasType;
 create foreign table fdwHasType
 	(
-		tagId int8, 
+		tagId int8,
 		tagclassId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -727,11 +727,11 @@ create (r)-[:hasType]->(s);
 drop foreign table fdwIsSubclassOf;
 create foreign table fdwIsSubclassOf
 	(
-		tagclass1Id int8, 
+		tagclass1Id int8,
 		tagclass2Id int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -744,7 +744,7 @@ match (r:TagClass), (s:TagClass)
 where (r).id::int8 = (row).tagclass1Id and (s).id::int8 = (row).tagclass2Id
 create (r)-[:isSubclassOf]->(s);
 
--- create index 
+-- create index
 
 -- vertices
 create unique index on ldbc.Forum (id);
@@ -827,23 +827,23 @@ create index on ldbc.hasType using gin(properties jsonb_path_ops);
 create index on ldbc.isSubclassOf using gin(properties jsonb_path_ops);
 
 -- Addtional indexes and Cluster
-create property index message_cc_idx 
+create property index message_cc_idx
 	on message (("creator"::int8), ("creationdate"::int8));
-create property index post_cc_idx 
+create property index post_cc_idx
 	on post (("creator"::int8),("creationdate"::int8));
-create property index comment_cc_idx 
+create property index comment_cc_idx
 	on "Comment" (("creator"::int8),("creationdate"::int8));
 
 cluster verbose ldbc.message using message_cc_idx;
 cluster verbose ldbc.post using post_cc_idx;
 cluster verbose ldbc."Comment" using comment_cc_idx;
 
-create property index post_fc_idx 
+create property index post_fc_idx
 	on post (("forumid"::int8),("creator"::int8));
 
-create property index comment_replyofpost_idx 
+create property index comment_replyofpost_idx
 	on "Comment" (("replyofpost"::int8));
-create property index comment_replyofcomment_idx 
+create property index comment_replyofcomment_idx
 	on "Comment" (("replyofcomment"::int8));
 
 create unique index on ldbc.hasMember (
@@ -863,6 +863,36 @@ create unique index on ldbc.hasMember (
 --create index on ldbc.hasTagPost ("end");
 --create index on ldbc.hasTagComment ("end");
 
+-- pre_eval weights
+DROP TABLE c14_weight;
+CREATE TABLE c14_weight(p1 int8, p2 int8, weight double precision);
+CREATE UNIQUE INDEX ON c14_weight(p1, p2);
+INSERT INTO c14_weight
+	SELECT p1, p2, SUM(inc) FROM (
+		SELECT
+			CASE when rep_creator < org_creator
+				THEN rep_creator ELSE org_creator END AS p1,
+			CASE when rep_creator < org_creator
+				THEN org_creator ELSE rep_creator END AS p2,
+			CASE WHEN org_is_post
+				THEN 1.0 ELSE 0.5 END AS inc
+		FROM (
+			MATCH (c:"Comment"), (m:Post)
+			WHERE c.replyOfPost::int8 = m.id::int8
+			RETURN c.creator::int8 AS rep_creator
+				 , m.creator::int8 AS org_creator
+				 , true AS org_is_post
+			UNION ALL
+			MATCH (c:"Comment"), (m:"Comment")
+			WHERE c.replyOfComment::int8 = m.id::int8
+			RETURN c.creator::int8 AS rep_creator
+				 , m.creator::int8 AS org_creator
+				 , false
+		) AS x
+		WHERE EXISTS ((:person {id: rep_creator})-[:knows]->(:person {id: org_creator}))
+	) AS x
+	GROUP BY p1, p2;
+
 -- Analyze vertices
 VACUUM analyze ldbc.forum;
 VACUUM analyze ldbc.message;
@@ -874,7 +904,7 @@ VACUUM analyze ldbc.place;
 VACUUM analyze ldbc.tag;
 VACUUM analyze ldbc.tagclass;
 
--- Analyze edges 
+-- Analyze edges
 VACUUM analyze ldbc.hasMember;
 VACUUM analyze ldbc.hasTagPost;
 VACUUM analyze ldbc.hasTagComment;

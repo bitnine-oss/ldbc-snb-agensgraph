@@ -32,6 +32,7 @@ create elabel studyAt;
 create elabel workAt;
 create elabel hasType;
 create elabel isSubclassOf;
+create elabel replyOf;
 
 -- Make Unlogged
 alter vlabel Forum set unlogged;
@@ -56,6 +57,7 @@ alter elabel studyAt set unlogged;
 alter elabel workAt set unlogged;
 alter elabel hasType set unlogged;
 alter elabel isSubclassOf set unlogged;
+alter elabel replyOf set unlogged;
 
 -- Drop Indexes
 drop constraint Forum_pkey on Forum;
@@ -91,6 +93,7 @@ drop index ldbc.studyAt_start_idx;
 drop index ldbc.workAt_start_idx;
 drop index ldbc.hasType_start_idx;
 drop index ldbc.isSubclassOf_start_idx;
+drop index ldbc.replyOf_start_idx;
 
 drop index ldbc.hasMember_end_idx;
 drop index ldbc.hasTagPost_end_idx;
@@ -105,6 +108,7 @@ drop index ldbc.studyAt_end_idx;
 drop index ldbc.workAt_end_idx;
 drop index ldbc.hasType_end_idx;
 drop index ldbc.isSubclassOf_end_idx;
+drop index ldbc.replyOf_end_idx;
 
 drop index ldbc.hasMember_id_idx;
 drop index ldbc.hasTagPost_id_idx;
@@ -119,6 +123,7 @@ drop index ldbc.studyAt_id_idx;
 drop index ldbc.workAt_id_idx;
 drop index ldbc.hasType_id_idx;
 drop index ldbc.isSubclassOf_id_idx;
+drop index ldbc.replyOf_id_idx;
 
 drop index ldbc.hasMember_properties_idx;
 drop index ldbc.hasTagPost_properties_idx;
@@ -133,157 +138,69 @@ drop index ldbc.studyAt_properties_idx;
 drop index ldbc.workAt_properties_idx;
 drop index ldbc.hasType_properties_idx;
 drop index ldbc.isSubclassOf_properties_idx;
+drop index ldbc.replyOf_properties_idx;
 
--- Forum
-\set file_name :source_path/forum_0_0.csv
+-----------------------------------------------------------------------------------------------
+-- Loading vertexes from FDW
+-- In this stage, ID references (e.g. creator in Post) are converted to GID references.
+-- GID refereces are added as additional properties whose prefix is 'gid_'.
+-- Previous ID references are also preserved. These are also used like for weight calculation.
+-----------------------------------------------------------------------------------------------
+
+-- Place
+\set file_name :source_path/place_0_0.csv
 \echo Start Loading :file_name
 
-drop foreign table fdwForum;
-create foreign table fdwForum
-	(
-		id int8,
-		title varchar(256),
-		creationDate int8,
-		moderator int8
-	)
-	server graph_import
-	options
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwForum as row
-create (:Forum =jsonb_strip_nulls(row_to_json(row)::jsonb));
+drop foreign table fdwPlace;
+create foreign table fdwPlace
+(
+	id int8,
+	name varchar(200),
+	url varchar(200),
+	type varchar(80),
+	isPartOf int8
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
 
--- Message
+LOAD FROM fdwPlace AS row
+CREATE (:Place =JSONB_STRIP_NULLS(ROW_TO_JSON(row)::JSONB));
 
---- Post (inherits Message)
-\set file_name :source_path/post_0_0.csv
-\echo Start Loading :file_name
+MATCH (pl1:place), (pl2: place)
+WHERE pl1.ispartof = pl2.id
+SET pl1.gid_ispartof = to_json(id(pl2));
 
-drop view PostBase;
-drop foreign table fdwPost;
-create foreign table fdwPost
-	(
-		id int8,
-        imageFile varchar(80),
-		creationDate int8,
-		locationIP varchar(80),
-		browserUsed varchar(80),
-		language varchar(80),
-		content text,
-		length int4,
-		creator int8,
-		forumID int8,
-		place int8
-	)
-	server graph_import
-	options
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-create view PostBase AS
- 	select id, creationDate, imageFile, content, creator, forumID, place
-	from fdwPost;
-load from PostBase as row
-create (:Post =jsonb_strip_nulls(row_to_json(row)::jsonb));
-drop table msgext;
-create table msgext as
-	select id, locationIP, browserUsed, language, length, content, imagefile
-	from fdwPost;
-
---- Comment (inherits Message)
-\set file_name :source_path/comment_0_0.csv
-\echo Start Loading :file_name
-
-drop view CommentBase;
-drop foreign table fdwComment;
-create foreign table fdwComment
-	(
-		id int8,
-		creationDate int8,
-		locationIP varchar(80),
-		browserUsed varchar(80),
-		content varchar(2000),
-		length int4,
-		creator int8,
-		place int8,
-		replyOfPost int8,
-		replyOfComment int8
-	)
-	server graph_import
-	options
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-create view CommentBase AS
- 	select id, creationDate, content, creator, place, replyofpost, replyOfComment
-	from fdwComment;
-load from CommentBase as row
-create (:"Comment" =jsonb_strip_nulls(row_to_json(row)::jsonb));
-insert into msgext
-	select id, locationIP, browserUsed, null, length, content, null
-	from fdwComment;
-
-create unique index msgext_idx on msgext (id);
-
--- Organization
-\set file_name :source_path/organisation_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwOrganization;
-create foreign table fdwOrganization
-	(
-		id int8,
-		type varchar(80),
-		name varchar(200),
-		url varchar(200),
-		place int8
-	)
-	server graph_import
-	options
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwOrganization as row
-create (:Organization =jsonb_strip_nulls(row_to_json(row)::jsonb));
+CREATE UNIQUE INDEX ON ldbc.place (((properties #>> '{id}'::text[])::int8));
+VACUUM ANALYZE ldbc.place;
 
 -- Person
-drop view person_view;
+DROP VIEW person_view;
 
 \set file_name :source_path/person_0_0.csv
 \echo Start Loading :file_name
 
-drop foreign table fdwPerson;
-create foreign table fdwPerson
+DROP FOREIGN TABLE fdwPerson;
+CREATE FOREIGN TABLE fdwPerson
 (
-	id int8,
-	firstName varchar(80),
-	lastName varchar(80),
-	gender varchar(6),
-	birthday int8,
-	creationDate int8,
-	locationIP varchar(80),
-	browserUsed varchar(80),
-	place int8
+	id INT8,
+	firstName VARCHAR(80),
+	lastName VARCHAR(80),
+	gender VARCHAR(6),
+	birthday INT8,
+	creationDate INT8,
+	locationIP VARCHAR(80),
+	browserUsed VARCHAR(80),
+	place INT8
 )
-server graph_import
-options
+SERVER graph_import
+OPTIONS
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -316,11 +233,171 @@ options
 \set file_name :source_path/person_speaks_language_0_0.csv
 \echo Start Loading :file_name
 
-drop foreign table fdwLanguage;
-create foreign table fdwLanguage
+DROP FOREIGN TABLE fdwLanguage;
+CREATE FOREIGN TABLE fdwLanguage
+(
+	id INT8,
+	language VARCHAR(200)
+)
+SERVER graph_import
+OPTIONS
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+CREATE VIEW person_view AS (
+    SELECT p.*, email, speaks
+    FROM
+        fdwPerson p LEFT OUTER JOIN
+		(SELECT id, ARRAY_AGG(email) email FROM fdwEmail GROUP BY id) e ON p.id = e.id LEFT OUTER JOIN
+		(SELECT id, ARRAY_AGG(language) speaks FROM fdwLanguage GROUP BY id) l ON p.id = l.id
+);
+
+LOAD FROM person_view AS row
+MATCH (pl:place) WHERE pl.id = (row).place
+CREATE (:Person = JSONB_SET(JSONB_STRIP_NULLS(ROW_TO_JSON(row)::JSONB), '{gid_place}', TO_JSONB(id(pl))));
+
+CREATE UNIQUE INDEX ON ldbc.person (((properties).id::int8));
+VACUUM ANALYZE ldbc.person;
+
+-- Forum
+\set file_name :source_path/forum_0_0.csv
+\echo Start Loading :file_name
+
+DROP FOREIGN TABLE fdwForum;
+CREATE FOREIGN TABLE fdwForum
+(
+	id INT8,
+	title VARCHAR(256),
+	creationDate INT8,
+	moderator INT8
+)
+SERVER graph_import
+OPTIONS
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+LOAD FROM fdwForum AS row
+MATCH (p:person)
+WHERE p.id::int8 = (row).moderator
+CREATE (:Forum = JSONB_SET(JSONB_STRIP_NULLS(ROW_TO_JSON(row)::jsonb), '{gid_moderator}', TO_JSONB(id(p))));
+
+CREATE UNIQUE INDEX ON ldbc.forum (((properties).id::int8));
+VACUUM analyze ldbc.forum;
+
+-- Message
+--- Post (inherits Message)
+\set file_name :source_path/post_0_0.csv
+\echo Start Loading :file_name
+
+DROP VIEW PostBase;
+DROP FOREIGN TABLE fdwPost;
+CREATE FOREIGN TABLE fdwPost
+(
+	id INT8,
+    imageFile VARCHAR(80),
+	creationDate INT8,
+	locationIP VARCHAR(80),
+	browserUsed VARCHAR(80),
+	language VARCHAR(80),
+	content TEXT,
+	length INT4,
+	creator INT8,
+	forumID INT8,
+	place INT8
+)
+SERVER graph_import
+OPTIONS
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+CREATE VIEW PostBase AS
+ 	SELECT id, creationDate, imageFile, content, creator, forumID, place
+	FROM fdwPost;
+
+LOAD FROM PostBase AS row
+MATCH (p:person), (f:forum), (pl:place)
+WHERE p.id::INT8 = (row).creator AND f.id::INT8 = (row).forumid AND pl.id::INT8 = (row).place
+CREATE (:post =
+		JSONB_SET(
+		  JSONB_SET(JSONB_SET(JSONB_STRIP_NULLS(ROW_TO_JSON(row)::JSONB), 
+			'{gid_creator}', TO_JSONB(ID(p))), '{gid_forumid}', TO_JSONB(ID(f))), '{gid_place}', TO_JSONB(ID(pl))));
+
+DROP TABLE msgext;
+CREATE TABLE msgext AS
+	SELECT id, locationIP, browserUsed, language, length, content, imagefile
+	FROM fdwPost;
+
+--- Comment (inherits Message)
+\set file_name :source_path/comment_0_0.csv
+\echo Start Loading :file_name
+
+drop view CommentBase;
+drop foreign table fdwComment;
+create foreign table fdwComment
+	(
+		id int8,
+		creationDate int8,
+		locationIP varchar(80),
+		browserUsed varchar(80),
+		content varchar(2000),
+		length int4,
+		creator int8,
+		place int8,
+		replyOfPost int8,
+		replyOfComment int8
+	)
+	server graph_import
+	options
+	(
+		 FORMAT 'csv',
+		 HEADER 'true',
+		 DELIMITER '|',
+		 NULL '',
+		 FILENAME :'file_name'
+	);
+create view CommentBase AS
+ 	select id, creationDate, content, creator, place, replyofpost, replyOfComment
+	from fdwComment;
+
+LOAD FROM CommentBase as row
+MATCH (p:person), (pl:place)
+WHERE p.id::int8 = (row).creator AND pl.id::int8 = (row).place
+CREATE (:"Comment" =
+		  jsonb_set(jsonb_set(jsonb_strip_nulls(row_to_json(row)::jsonb), 
+			'{gid_creator}', to_jsonb(id(p))), '{gid_place}', to_jsonb(id(pl))));
+
+insert into msgext
+	select id, locationIP, browserUsed, null, length, content, null
+	from fdwComment;
+
+create unique index msgext_idx on msgext (id);
+
+-- Organization
+\set file_name :source_path/organisation_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwOrganization;
+create foreign table fdwOrganization
 (
 	id int8,
-	language varchar(200)
+	type varchar(80),
+	name varchar(200),
+	url varchar(200),
+	place int8
 )
 server graph_import
 options
@@ -332,41 +409,12 @@ options
 	 FILENAME :'file_name'
 );
 
-create view person_view as (
-    SELECT p.*, email, speaks
-    FROM
-        fdwPerson p LEFT OUTER JOIN
-		(SELECT id, array_agg(email) email FROM fdwEmail GROUP BY id) e ON p.id = e.id LEFT OUTER JOIN
-		(SELECT id, array_agg(language) speaks FROM fdwLanguage GROUP BY id) l ON p.id = l.id
-);
-
-load from person_view as row
-create (:Person =jsonb_strip_nulls(row_to_json(row)::jsonb));
-
--- Place
-\set file_name :source_path/place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPlace;
-create foreign table fdwPlace
-	(
-		id int8,
-		name varchar(200),
-		url varchar(200),
-		type varchar(80),
-		isPartOf int8
-	)
-	server graph_import
-	options
-	(
-		 FORMAT 'csv',
-		 HEADER 'true',
-		 DELIMITER '|',
-		 NULL '',
-		 FILENAME :'file_name'
-	);
-load from fdwPlace as row
-create (:Place =jsonb_strip_nulls(row_to_json(row)::jsonb));
+LOAD FROM fdwOrganization AS row
+MATCH (pl:place)
+WHERE pl.id::int8 = (row).place
+CREATE (:Organization = 
+		  jsonb_set(jsonb_strip_nulls(row_to_json(row)::jsonb),
+				    '{gid_place}', to_jsonb(id(pl))));
 
 -- Tag
 \set file_name :source_path/tag_0_0.csv
@@ -426,24 +474,19 @@ create (:TagClass =jsonb_strip_nulls(row_to_json(row)::jsonb));
 --create PROPERTY index on place (id);
 --create PROPERTY index on tag (id);
 --create PROPERTY index on tagclass (id);
-create UNIQUE index on ldbc.forum (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.message (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.post (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc."Comment" (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.organization (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.person (((properties #>> '{id}'::text[])::int8));
-create UNIQUE index on ldbc.place (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.tag (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.tagclass (((properties #>> '{id}'::text[])::int8));
 
 -- Analyze vertices
-VACUUM analyze ldbc.forum;
 VACUUM analyze ldbc.message;
 VACUUM analyze ldbc.post;
 VACUUM analyze ldbc."Comment";
 VACUUM analyze ldbc.organization;
-VACUUM analyze ldbc.person;
-VACUUM analyze ldbc.place;
 VACUUM analyze ldbc.tag;
 VACUUM analyze ldbc.tagclass;
 
@@ -744,6 +787,11 @@ match (r:TagClass), (s:TagClass)
 where (r).id::int8 = (row).tagclass1Id and (s).id::int8 = (row).tagclass2Id
 create (r)-[:isSubclassOf]->(s);
 
+--- replyOf
+MATCH (c:"Comment"), (m:message)
+WHERE (c.replyofpost::int8 = m.id::int8 or c.replyofcomment::int8 = m.id::int8)
+CREATE (c)-[:replyof]->(m);
+
 -- create index
 
 -- vertices
@@ -782,6 +830,7 @@ create index on ldbc.studyAt (id);
 create index on ldbc.workAt (id);
 create index on ldbc.hasType (id);
 create index on ldbc.isSubclassOf (id);
+create index on ldbc.replyOf (id);
 
 create index on ldbc.hasMember (start, "end", id);
 create index on ldbc.hasTagPost (start, "end", id);
@@ -796,6 +845,7 @@ create index on ldbc.studyAt (start, "end", id);
 create index on ldbc.workAt (start, "end", id);
 create index on ldbc.hasType (start, "end", id);
 create index on ldbc.isSubclassOf (start, "end", id);
+create index on ldbc.replyOf (start, "end", id);
 
 create index on ldbc.hasMember ("end", start, id);
 create index on ldbc.hasTagPost ("end", start, id);
@@ -810,6 +860,7 @@ create index on ldbc.studyAt ("end", start, id);
 create index on ldbc.workAt ("end", start, id);
 create index on ldbc.hasType ("end", start, id);
 create index on ldbc.isSubclassOf ("end", start, id);
+create index on ldbc.replyOf ("end", start, id);
 
 -- gin
 create index on ldbc.hasMember using gin(properties jsonb_path_ops);
@@ -825,21 +876,22 @@ create index on ldbc.studyat using gin(properties jsonb_path_ops);
 create index on ldbc.workat using gin(properties jsonb_path_ops);
 create index on ldbc.hasType using gin(properties jsonb_path_ops);
 create index on ldbc.isSubclassOf using gin(properties jsonb_path_ops);
+create index on ldbc.replyOf using gin(properties jsonb_path_ops);
 
 -- Addtional indexes and Cluster
 create property index message_cc_idx
-	on message (("creator"::int8), ("creationdate"::int8));
+	on message (("gid_creator"::graphid), ("creationdate"::int8));
 create property index post_cc_idx
-	on post (("creator"::int8),("creationdate"::int8));
+	on post (("gid_creator"::graphid),("creationdate"::int8));
 create property index comment_cc_idx
-	on "Comment" (("creator"::int8),("creationdate"::int8));
+	on "Comment" (("gid_creator"::graphid),("creationdate"::int8));
 
 cluster verbose ldbc.message using message_cc_idx;
 cluster verbose ldbc.post using post_cc_idx;
 cluster verbose ldbc."Comment" using comment_cc_idx;
 
 create property index post_fc_idx
-	on post (("forumid"::int8),("creator"::int8));
+	on post (("gid_forumid"::graphid),("gid_creator"::graphid));
 
 create property index comment_replyofpost_idx
 	on "Comment" (("replyofpost"::int8));
@@ -875,26 +927,17 @@ INSERT INTO c14_weight
                 THEN org_creator ELSE rep_creator END AS p2,
             inc
         FROM (
-            MATCH (c:"Comment"), (m:Post)
-            WHERE c.replyOfPost::int8 = m.id::int8
-            RETURN c.creator::int8 AS rep_creator
-                 , m.creator::int8 AS org_creator
-                 , 1.0 AS inc
+            MATCH (p1:person)-[:knows]->(p2:person),
+			      (c:"Comment")-[:replyof]->(m:Post)
+		    WHERE id(p1) = c.gid_creator::graphid AND id(p2) = m.gid_creator::graphid
+            RETURN p1.id::int8 AS rep_creator, p2.id::int8 AS org_creator, 1.0 AS inc
             UNION ALL
-            MATCH (c:"Comment"), (m:"Comment")
-            WHERE c.replyOfComment::int8 = m.id::int8
-            RETURN c.creator::int8 AS rep_creator
-                 , m.creator::int8 AS org_creator
-                 , 0.5
-        ) AS x,
-		lateral (
-			SELECT * FROM (
-			MATCH (p:Person)-[:knows]->(f:Person)
-			WHERE p.id::int8 = rep_creator AND f.id::int8 = org_creator
-			RETURN 1 AS b
-			) AS dummy
-		) p
-    ) AS x
+            MATCH (p1:person)-[:knows]->(p2:person),
+			      (c:"Comment")-[:replyof]->(m:"Comment")
+		    WHERE id(p1) = c.gid_creator::graphid AND id(p2) = m.gid_creator::graphid
+            RETURN p1.id::int8 AS rep_creator, p2.id::int8 AS org_creator, 0.5 AS inc
+		) _
+	) p
     GROUP BY p1, p2;
 CREATE UNIQUE INDEX ON c14_weight(p1, p2);
 ALTER TABLE c14_weight SET LOGGED;

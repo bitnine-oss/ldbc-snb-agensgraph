@@ -538,7 +538,7 @@ public class AGDb extends Db {
                     "  AND not exists((friend)-[:knows]-(person)) " +
                     "WITH DISTINCT friend, city, person " +
                     "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post:Post) " +
-                    "WITH friend, city, array_remove(array_agg(post), NULL) AS posts, person " +
+                    "WITH friend, city, array_remove(array_agg(post.id::int8), NULL) AS posts, person " +
                     "WITH  " +
                     "  friend, " +
                     "  city, " +

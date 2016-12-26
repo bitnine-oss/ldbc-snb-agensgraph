@@ -30,34 +30,16 @@ end
 $$ language plpgsql;
 
 -- used in complex query 10
-create or replace function c10_fc(posts vertex[], person_id int8)
+set graph_path = ldbc;
+
+create or replace function c10_fc(post_ids int8[], person_id int8)
 returns int8 as $$
-declare
-	cnt int8 := 0;
-	has_interest_tag boolean;
-	post vertex;
-	post_id int8;
-begin
-	if posts is null
-	then
-		return 0;
-	end if;
-
-	foreach post in array posts
-	loop
-		post_id = (properties(post)).id::int8;
-		match (post:Post)-[:hasTagPost]->(:Tag)<-[:hasInterest]-(p:Person)
-		where post.id::int8 = post_id and p.id::int8 = person_id
-		return count(p) > 0 into has_interest_tag;
-		if has_interest_tag
-		then
-			cnt := cnt + 1;
-		end if;
-	end loop;
-
-	return cnt;
-end
-$$ language plpgsql;
+	select count(*)
+	from unnest(post_ids) x (id)
+	where exists (select 1
+				  from (match (post:Post)-[:hasTagPost]->(:Tag)<-[:hasInterest]-(p:Person)
+				  where post.id::int8 = x.id and p.id::int8 = person_id return 1) y);
+$$ language sql;
 
 create or replace function calc_weight(node_ids int8[])
 returns double precision as $$
@@ -129,13 +111,13 @@ DECLARE
 BEGIN
     -- Create a temporary table for storing the estimates as the algorithm runs
     CREATE TEMP TABLE inter_result1
-    (   
+    (
         nid graphid,
         path graphid[]
     ) ON COMMIT DROP;
 
-    CREATE TEMP TABLE inter_result2 
-    (   
+    CREATE TEMP TABLE inter_result2
+    (
         nid graphid,
         path graphid[]
     ) ON COMMIT DROP;
@@ -153,22 +135,22 @@ BEGIN
     -- Run the algorithm until we decide that we are finished
     LOOP
         IF iter % 2 = 0 THEN
-            INSERT INTO inter_result2 
+            INSERT INTO inter_result2
                 SELECT distinct e."end", i.path || e."end"
                 FROM knows_union AS e, inter_result1 AS i
                 WHERE nid = e.start AND e."end" = endnode;
         ELSE
-            INSERT INTO inter_result1 
+            INSERT INTO inter_result1
                 SELECT distinct e."end", i.path || e."end"
                 FROM knows_union AS e, inter_result2 AS i
                 WHERE nid = e.start AND e."end" = endnode;
-        END IF; 
+        END IF;
 
         GET DIAGNOSTICS rowcount = ROW_COUNT;
-        IF rowcount != 0 THEN EXIT; END IF; 
+        IF rowcount != 0 THEN EXIT; END IF;
 
         IF iter % 2 = 0 THEN
-            INSERT INTO inter_result2 
+            INSERT INTO inter_result2
                 SELECT distinct e."end", i.path || e."end"
                 FROM knows_union AS e, inter_result1 AS i
 				WHERE nid = e.start AND NOT (i.path @> array[e."end"]);
@@ -208,7 +190,7 @@ declare
 	pid int8;
 	ret int8[];
 begin
-	foreach gid in array graphids 
+	foreach gid in array graphids
 	loop
 		match (p:Person) where id(p) = gid return p.id::int8 into pid;
 		ret := array_append(ret, pid);

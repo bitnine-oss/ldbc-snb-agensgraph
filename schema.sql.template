@@ -246,7 +246,7 @@ create foreign table fdwForum
 		 FILENAME :'file_name'
 	);
 load from fdwForum as row
-create (:Forum =row_to_json(row)::jsonb);
+create (:Forum =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Message
 
@@ -276,7 +276,7 @@ create foreign table fdwPost
 		 FILENAME :'file_name'
 	);
 load from fdwPost as row
-create (:Post =row_to_json(row)::jsonb);
+create (:Post =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 --- Comment (inherits Message)
 \set file_name :source_path/comment_0_0.csv
@@ -302,7 +302,7 @@ create foreign table fdwComment
 		 FILENAME :'file_name'
 	);
 load from fdwComment as row
-create (:"Comment" =row_to_json(row)::jsonb);
+create (:"Comment" =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Organization
 \set file_name :source_path/organisation_0_0.csv
@@ -326,7 +326,7 @@ create foreign table fdwOrganization
 		 FILENAME :'file_name'
 	);
 load from fdwOrganization as row
-create (:Organization =row_to_json(row)::jsonb);
+create (:Organization =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Person
 drop view person_view;
@@ -405,7 +405,7 @@ create view person_view as (
 );
 
 load from person_view as row
-create (:Person =row_to_json(row)::jsonb);
+create (:Person =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Place
 \set file_name :source_path/place_0_0.csv
@@ -429,7 +429,7 @@ create foreign table fdwPlace
 		 FILENAME :'file_name'
 	);
 load from fdwPlace as row
-create (:Place =row_to_json(row)::jsonb);
+create (:Place =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Tag
 \set file_name :source_path/tag_0_0.csv
@@ -452,7 +452,7 @@ create foreign table fdwTag
 		 FILENAME :'file_name'
 	);
 load from fdwTag as row
-create (:Tag =row_to_json(row)::jsonb);
+create (:Tag =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- TagClass
 \set file_name :source_path/tagclass_0_0.csv
@@ -475,7 +475,7 @@ create foreign table fdwTagClass
 		 FILENAME :'file_name'
 	);
 load from fdwTagClass as row
-create (:TagClass =row_to_json(row)::jsonb);
+create (:TagClass =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
 -- Make property indexes for 'id' field of vertexes
 --- should be replaced to using CREATE PROPERTY INDEX

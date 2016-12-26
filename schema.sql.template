@@ -230,14 +230,14 @@ drop index ldbc.workAt_properties_idx;
 \echo Start Loading :file_name
 
 drop foreign table fdwForum;
-create foreign table fdwForum 
+create foreign table fdwForum
 	(
-		id int8, 
-		title varchar(256), 
+		id int8,
+		title varchar(256),
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -255,9 +255,9 @@ create (:Forum =row_to_json(row)::jsonb);
 \echo Start Loading :file_name
 
 drop foreign table fdwPost;
-create foreign table fdwPost 
+create foreign table fdwPost
 	(
-		id int8, 
+		id int8,
 		imageFile varchar(80),
 		creationDate int8,
 		locationIP varchar(80),
@@ -267,7 +267,7 @@ create foreign table fdwPost
 		length int4
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -283,9 +283,9 @@ create (:Post =row_to_json(row)::jsonb);
 \echo Start Loading :file_name
 
 drop foreign table fdwComment;
-create foreign table fdwComment 
+create foreign table fdwComment
 	(
-		id int8, 
+		id int8,
 		creationDate int8,
 		locationIP varchar(80),
 		browserUsed varchar(80),
@@ -293,7 +293,7 @@ create foreign table fdwComment
 		length int4
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -309,15 +309,15 @@ create (:"Comment" =row_to_json(row)::jsonb);
 \echo Start Loading :file_name
 
 drop foreign table fdwOrganization;
-create foreign table fdwOrganization 
+create foreign table fdwOrganization
 	(
-		id int8, 
+		id int8,
 		type varchar(80),
 		name varchar(200),
 		url varchar(200)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -335,9 +335,9 @@ drop view person_view;
 \echo Start Loading :file_name
 
 drop foreign table fdwPerson;
-create foreign table fdwPerson 
+create foreign table fdwPerson
 (
-	id int8, 
+	id int8,
 	firstName varchar(80),
 	lastName varchar(80),
 	gender varchar(6),
@@ -347,7 +347,7 @@ create foreign table fdwPerson
 	browserUsed varchar(80)
 )
 server graph_import
-options 
+options
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -361,13 +361,13 @@ options
 \echo Start Loading :file_name
 
 drop foreign table fdwEmail;
-create foreign table fdwEmail 
+create foreign table fdwEmail
 (
-	id int8, 
+	id int8,
 	email varchar(200)
 )
 server graph_import
-options 
+options
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -381,13 +381,13 @@ options
 \echo Start Loading :file_name
 
 drop foreign table fdwLanguage;
-create foreign table fdwLanguage 
+create foreign table fdwLanguage
 (
-	id int8, 
+	id int8,
 	language varchar(200)
 )
 server graph_import
-options 
+options
 (
 	 FORMAT 'csv',
 	 HEADER 'true',
@@ -412,15 +412,15 @@ create (:Person =row_to_json(row)::jsonb);
 \echo Start Loading :file_name
 
 drop foreign table fdwPlace;
-create foreign table fdwPlace 
+create foreign table fdwPlace
 	(
-		id int8, 
+		id int8,
 		name varchar(200),
 		url varchar(200),
 		type varchar(80)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -436,14 +436,14 @@ create (:Place =row_to_json(row)::jsonb);
 \echo Start Loading :file_name
 
 drop foreign table fdwTag;
-create foreign table fdwTag 
+create foreign table fdwTag
 	(
-		id int8, 
+		id int8,
 		name varchar(200),
 		url varchar(200)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -459,14 +459,14 @@ create (:Tag =row_to_json(row)::jsonb);
 \echo Start Loading :file_name
 
 drop foreign table fdwTagClass;
-create foreign table fdwTagClass 
+create foreign table fdwTagClass
 	(
-		id int8, 
+		id int8,
 		name varchar(200),
 		url varchar(200)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -489,7 +489,7 @@ create (:TagClass =row_to_json(row)::jsonb);
 --create PROPERTY index on place (id);
 --create PROPERTY index on tag (id);
 --create PROPERTY index on tagclass (id);
-create UNIQUE index on ldbc.forum (((properties #>> '{id}'::text[])::int8));      
+create UNIQUE index on ldbc.forum (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.message (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc.post (((properties #>> '{id}'::text[])::int8));
 create UNIQUE index on ldbc."Comment" (((properties #>> '{id}'::text[])::int8));
@@ -516,13 +516,13 @@ analyze ldbc.tagclass;
 \echo Start Loading :file_name
 
 drop foreign table fdwContainerOf;
-create foreign table fdwContainerOf 
+create foreign table fdwContainerOf
 	(
-		forumId int8, 
+		forumId int8,
 		postId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -542,11 +542,11 @@ create (r)-[:containerOf]->(s);
 drop foreign table fdwPostHasCreator;
 create foreign table fdwPostHasCreator
 	(
-		postId int8, 
+		postId int8,
 		personId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -566,11 +566,11 @@ create (r)-[:hasCreatorPost]->(s);
 drop foreign table fdwCommentHasCreator;
 create foreign table fdwCommentHasCreator
 	(
-		commentId int8, 
+		commentId int8,
 		personId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -590,11 +590,11 @@ create (r)-[:hasCreatorComment]->(s);
 drop foreign table fdwHasInterest;
 create foreign table fdwHasInterest
 	(
-		personId int8, 
+		personId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -614,12 +614,12 @@ create (r)-[:hasInterest]->(s);
 drop foreign table fdwHasMember;
 create foreign table fdwHasMember
 	(
-		forumId int8, 
+		forumId int8,
 		personId int8,
 		joinDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -639,11 +639,11 @@ create (r)-[:hasMember {'joinDate': (row).joinDate}]->(s);
 drop foreign table fdwHasModerator;
 create foreign table fdwHasModerator
 	(
-		forumId int8, 
+		forumId int8,
 		personId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -663,11 +663,11 @@ create (r)-[:hasModerator]->(s);
 drop foreign table fdwPostHasTag;
 create foreign table fdwPostHasTag
 	(
-		postId int8, 
+		postId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -687,11 +687,11 @@ create (r)-[:hasTagPost]->(s);
 drop foreign table fdwCommentHasTag;
 create foreign table fdwCommentHasTag
 	(
-		commentId int8, 
+		commentId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -711,11 +711,11 @@ create (r)-[:hasTagComment]->(s);
 drop foreign table fdwForumHasTag;
 create foreign table fdwForumHasTag
 	(
-		forumId int8, 
+		forumId int8,
 		tagId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -735,11 +735,11 @@ create (r)-[:hasTagForum]->(s);
 drop foreign table fdwHasType;
 create foreign table fdwHasType
 	(
-		tagId int8, 
+		tagId int8,
 		tagclassId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -759,11 +759,11 @@ create (r)-[:hasType]->(s);
 drop foreign table fdwOrganIsLocatedIn;
 create foreign table fdwOrganIsLocatedIn
 	(
-		organId int8, 
+		organId int8,
 		placeId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -783,11 +783,11 @@ create (r)-[:isLocatedInOrgan]->(s);
 drop foreign table fdwPostIsLocatedIn;
 create foreign table fdwPostIsLocatedIn
 	(
-		postId int8, 
+		postId int8,
 		placeId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -807,11 +807,11 @@ create (r)-[:isLocatedInPost]->(s);
 drop foreign table fdwCommentIsLocatedIn;
 create foreign table fdwCommentIsLocatedIn
 	(
-		commentId int8, 
+		commentId int8,
 		placeId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -831,11 +831,11 @@ create (r)-[:isLocatedInComment]->(s);
 drop foreign table fdwPersonIsLocatedIn;
 create foreign table fdwPersonIsLocatedIn
 	(
-		personId int8, 
+		personId int8,
 		placeId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -855,11 +855,11 @@ create (r)-[:isLocatedInPerson]->(s);
 drop foreign table fdwIsPartOf;
 create foreign table fdwIsPartOf
 	(
-		place1Id int8, 
+		place1Id int8,
 		place2Id int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -879,11 +879,11 @@ create (r)-[:isPartOf]->(s);
 drop foreign table fdwIsSubclassOf;
 create foreign table fdwIsSubclassOf
 	(
-		tagclass1Id int8, 
+		tagclass1Id int8,
 		tagclass2Id int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -903,12 +903,12 @@ create (r)-[:isSubclassOf]->(s);
 drop foreign table fdwKnows;
 create foreign table fdwKnows
 	(
-		person1Id int8, 
+		person1Id int8,
 		person2Id int8,
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -919,7 +919,8 @@ create foreign table fdwKnows
 load from fdwKnows as row
 match (r:Person), (s:Person)
 where (r).id::int8 = (row).person1Id and (s).id::int8 = (row).person2Id
-create (r)-[:knows {'creationDate': (row).creationDate}]->(s);
+create (r)-[:knows {'creationDate': (row).creationDate}]->(s)
+create (s)-[:knows {'creationDate': (row).creationDate}]->(r);
 
 --- likes (post)
 \set file_name :source_path/person_likes_post_0_0.csv
@@ -928,12 +929,12 @@ create (r)-[:knows {'creationDate': (row).creationDate}]->(s);
 drop foreign table fdwLikesPost;
 create foreign table fdwLikesPost
 	(
-		personId int8, 
+		personId int8,
 		postId int8,
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -953,12 +954,12 @@ create (r)-[:likesPost {'creationDate': (row).creationDate}]->(s);
 drop foreign table fdwLikesComment;
 create foreign table fdwLikesComment
 	(
-		personId int8, 
+		personId int8,
 		commentId int8,
 		creationDate int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -978,11 +979,11 @@ create (r)-[:likesComment {'creationDate': (row).creationDate}]->(s);
 drop foreign table fdwReplyOfPost;
 create foreign table fdwReplyOfPost
 	(
-		commentId int8, 
+		commentId int8,
 		postId int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -1002,11 +1003,11 @@ create (r)-[:replyOfPost]->(s);
 drop foreign table fdwReplyOfComment;
 create foreign table fdwReplyOfComment
 	(
-		comment1Id int8, 
+		comment1Id int8,
 		comment2Id int8
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -1026,12 +1027,12 @@ create (r)-[:replyOfComment]->(s);
 drop foreign table fdwStudyAt;
 create foreign table fdwStudyAt
 	(
-		personId int8, 
+		personId int8,
 		organId int8,
 		classYear char(4)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -1051,12 +1052,12 @@ create (r)-[:studyAt {'classYear': (row).classYear}]->(s);
 drop foreign table fdwWorkAt;
 create foreign table fdwWorkAt
 	(
-		personId int8, 
+		personId int8,
 		organId int8,
 		workFrom char(4)
 	)
 	server graph_import
-	options 
+	options
 	(
 		 FORMAT 'csv',
 		 HEADER 'true',
@@ -1069,7 +1070,7 @@ match (r:Person), (s:Organization)
 where (r).id::int8 = (row).personId and (s).id::int8 = (row).organId
 create (r)-[:workAt {'workFrom': (row).workFrom}]->(s);
 
--- create index 
+-- create index
 
 -- vertices
 create unique index on ldbc.Forum (id);
@@ -1211,7 +1212,7 @@ create index on ldbc.replyOfComment using gin(properties jsonb_path_ops);
 create index on ldbc.studyat using gin(properties jsonb_path_ops);
 create index on ldbc.workat using gin(properties jsonb_path_ops);
 
--- Analyze edges 
+-- Analyze edges
 VACUUM analyze ldbc.containerOf;
 VACUUM analyze ldbc.hasCreator;
 VACUUM analyze ldbc.hasCreatorPost;

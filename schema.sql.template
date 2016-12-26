@@ -1212,36 +1212,6 @@ create index on ldbc.replyOfComment using gin(properties jsonb_path_ops);
 create index on ldbc.studyat using gin(properties jsonb_path_ops);
 create index on ldbc.workat using gin(properties jsonb_path_ops);
 
--- Analyze edges
-VACUUM analyze ldbc.containerOf;
-VACUUM analyze ldbc.hasCreator;
-VACUUM analyze ldbc.hasCreatorPost;
-VACUUM analyze ldbc.hasCreatorComment;
-VACUUM analyze ldbc.hasInterest;
-VACUUM analyze ldbc.hasMember;
-VACUUM analyze ldbc.hasModerator;
-VACUUM analyze ldbc.hasTag;
-VACUUM analyze ldbc.hasTagPost;
-VACUUM analyze ldbc.hasTagComment;
-VACUUM analyze ldbc.hasTagForum;
-VACUUM analyze ldbc.hasType;
-VACUUM analyze ldbc.isLocatedIn;
-VACUUM analyze ldbc.isLocatedInOrgan;
-VACUUM analyze ldbc.isLocatedInPost;
-VACUUM analyze ldbc.isLocatedInComment;
-VACUUM analyze ldbc.isLocatedInPerson;
-VACUUM analyze ldbc.isPartOf;
-VACUUM analyze ldbc.isSubclassOf;
-VACUUM analyze ldbc.knows;
-VACUUM analyze ldbc.likes;
-VACUUM analyze ldbc.likesPost;
-VACUUM analyze ldbc.likesComment;
-VACUUM analyze ldbc.replyOf;
-VACUUM analyze ldbc.replyOfPost;
-VACUUM analyze ldbc.replyOfComment;
-VACUUM analyze ldbc.studyAt;
-VACUUM analyze ldbc.workAt;
-
 -- denormalization & cluster
 
 -- message
@@ -1280,4 +1250,45 @@ create property index on post4 (("forumID"::graphid),("creatorID"::graphid));
 
 cluster verbose ldbc.post4 using post4_property_idx;
 
-analyze ldbc.post4;
+-- Analyze vertices
+VACUUM analyze ldbc.post4;
+VACUUM analyze ldbc.forum;
+VACUUM analyze ldbc.message;
+VACUUM analyze ldbc.post;
+VACUUM analyze ldbc."Comment";
+VACUUM analyze ldbc.organization;
+VACUUM analyze ldbc.person;
+VACUUM analyze ldbc.place;
+VACUUM analyze ldbc.tag;
+VACUUM analyze ldbc.tagclass;
+
+-- Analyze edges
+VACUUM analyze ldbc.containerOf;
+VACUUM analyze ldbc.hasCreator;
+VACUUM analyze ldbc.hasCreatorPost;
+VACUUM analyze ldbc.hasCreatorComment;
+VACUUM analyze ldbc.hasInterest;
+VACUUM analyze ldbc.hasMember;
+VACUUM analyze ldbc.hasModerator;
+VACUUM analyze ldbc.hasTag;
+VACUUM analyze ldbc.hasTagPost;
+VACUUM analyze ldbc.hasTagComment;
+VACUUM analyze ldbc.hasTagForum;
+VACUUM analyze ldbc.hasType;
+VACUUM analyze ldbc.isLocatedIn;
+VACUUM analyze ldbc.isLocatedInOrgan;
+VACUUM analyze ldbc.isLocatedInPost;
+VACUUM analyze ldbc.isLocatedInComment;
+VACUUM analyze ldbc.isLocatedInPerson;
+VACUUM analyze ldbc.isPartOf;
+VACUUM analyze ldbc.isSubclassOf;
+VACUUM analyze ldbc.knows;
+VACUUM analyze ldbc.likes;
+VACUUM analyze ldbc.likesPost;
+VACUUM analyze ldbc.likesComment;
+VACUUM analyze ldbc.replyOf;
+VACUUM analyze ldbc.replyOfPost;
+VACUUM analyze ldbc.replyOfComment;
+VACUUM analyze ldbc.studyAt;
+VACUUM analyze ldbc.workAt;
+

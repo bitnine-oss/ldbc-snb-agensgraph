@@ -1262,25 +1262,21 @@ INSERT INTO c14_weight
                 THEN org_creator ELSE rep_creator END AS p2,
             inc
         FROM (
+            MATCH (p:Person)-[:knows]->(f:Person)
+            RETURN p.id::int8 AS rep_creator, f.id::int8 AS org_creator
+        ) p,
+		lateral (
+			SELECT * FROM (
             MATCH
-			(p1:Person)<-[:hasCreatorComment]-(c:"Comment")-[:replyOfPost]->(m:Post)-[:hasCreatorPost]->(p2:Person)
-            RETURN p1.id::int8 AS rep_creator
-                 , p2.id::int8 AS org_creator
-                 , 1.0 AS inc
+            (p1:Person)<-[:hasCreatorComment]-(c:"Comment")-[:replyOfPost]->(m:Post)-[:hasCreatorPost]->(p2:Person)
+			WHERE p1.id::int8 = rep_creator AND p2.id::int8 = org_creator
+            RETURN 1.0 AS inc
             UNION ALL
             MATCH
-			(p1:Person)<-[:hasCreatorComment]-(c:"Comment")-[:replyOfComment]->(m:"Comment")-[:hasCreatorComment]->(p2:Person)
-            RETURN p1.id::int8 AS rep_creator
-                 , p2.id::int8 AS org_creator
-                 , 0.5
-        ) AS x,
-        lateral (
-            SELECT * FROM (
-            MATCH (p:Person)-[:knows]->(f:Person)
-            WHERE p.id::int8 = rep_creator AND f.id::int8 = org_creator
-            RETURN 1 AS b
-            ) AS dummy
-        ) p
+            (p1:Person)<-[:hasCreatorComment]-(c:"Comment")-[:replyOfComment]->(m:"Comment")-[:hasCreatorComment]->(p2:Person)
+			WHERE p1.id::int8 = rep_creator AND p2.id::int8 = org_creator
+            RETURN 0.5) AS DUMMY
+        ) AS x
     ) AS x
     GROUP BY p1, p2;
 CREATE UNIQUE INDEX ON c14_weight(p1, p2);

@@ -699,7 +699,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
             String stmt = "SELECT " +
                     "  extract_ids(vertex_ids) AS pathNodeIds, " +
-                    "  calc_weight(vertex_ids) AS weight " +
+                    "  get_weight(vertex_ids) AS weight " +
                     "FROM allshortestpath_vertex_ids(?, ?) " +
                     "ORDER BY weight DESC";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery14.person1Id(), ldbcQuery14.person2Id());

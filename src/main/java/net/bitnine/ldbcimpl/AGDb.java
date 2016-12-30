@@ -256,7 +256,7 @@ public class AGDb extends Db {
                           "  SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " +
                           "  FROM " +
                           "  ( " +
-                          "    MATCH (person:Person)-[:KNOWS]->(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "    MATCH (person:Person)-[:KNOWS]->()<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
                           "    WHERE " +
                           "    person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
                           "    RETURN " +
@@ -264,7 +264,7 @@ public class AGDb extends Db {
                           "  ) T1 " +
                           "  LEFT JOIN " +
                           "  ( " +
-                          "    MATCH (person:Person)-[:KNOWS]->(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "    MATCH (person:Person)-[:KNOWS]->()<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
                           "    WHERE " +
                           "    person.id::int8 = ? AND post.creationDate::int8 < ? " +
                           "    RETURN " +
@@ -342,7 +342,7 @@ public class AGDb extends Db {
                     "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
                     "WHERE person.id::int8 = ? AND id(person) != id(friend) " +
 		            "WITH DISTINCT friend " +
-                    "MATCH (friend)<-[:hascreatorpost]-(friendPost:Post)-[:hasTagPost]->(knownTag:Tag) " +
+                    "MATCH (friend)<-[:hascreatorpost]-(friendPost)-[:hasTagPost]->(knownTag:Tag) " +
                     "WHERE knownTag.name <> ? AND exists((friendPost)-[:hasTagPost]->(:Tag {'name': ?})) " +
                     "RETURN " +
                     "  knownTag.name AS tagName, " +
@@ -420,7 +420,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery8.toString() +" \n" + 
-                    "MATCH (p:Person)<-[:hasCreator]-(:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(person:Person) " +
+                    "MATCH (p:Person)<-[:hasCreator]-()<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(person:Person) " +
                     "WHERE p.id::int8 = ? " +
 		    "WITH person, c " +
 		    "ORDER BY c.creationDate::int8 DESC, c.id::int8 ASC LIMIT ? " +
@@ -594,7 +594,7 @@ public class AGDb extends Db {
                     "MATCH (person:Person)-[:knows]->(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "OPTIONAL MATCH " +
-                    "  (friend)<-[:hasCreatorComment]-(c:\"Comment\")-[:replyOfPost]->(:Post)-[:hasTagPost]->(tag:Tag), " +
+                    "  (friend)<-[:hasCreatorComment]-(c)-[:replyOfPost]->()-[:hasTagPost]->(tag:Tag), " +
                     "  (tag:Tag)-[:hasType]->(tagClass:TagClass)-[:isSubclassOf*0..]->(baseTagClass:TagClass) " +
                     "WHERE tagClass.name = ? OR baseTagClass.name = ? " +
                     "RETURN " +
@@ -602,7 +602,7 @@ public class AGDb extends Db {
                     "  friend.firstName AS friendFirstName, " +
                     "  friend.lastName AS friendLastName, " +
                     "  array_to_json(array_remove(array_agg(DISTINCT tag.name), NULL))::jsonb AS tagNames, " +
-                    "  count(DISTINCT c) AS count " +
+                    "  count(DISTINCT id(c)) AS count " +
                     "ORDER BY count DESC, friendId ASC " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery12.personId(), ldbcQuery12.tagClassName(),

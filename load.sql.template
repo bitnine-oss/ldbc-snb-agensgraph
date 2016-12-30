@@ -1,0 +1,8 @@
+-- Set the source path
+\set source_path '/absolute/path/to/social_network'
+
+\timing on
+
+\i enable_fdw.sql
+\i schema.sql
+\i proc.sql

@@ -77,7 +77,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState) dbConnectionState).getClent();
 
-            String query ="MATCH (p:Person)-[path:knows*1..3]->(friend:Person {'firstname': ?}) " +
+            String stmt = "-- " + ldbcQuery1.toString() +" \n" + 
+                    "MATCH (p:Person)-[path:knows*1..3]->(friend:Person {'firstname': ?}) " +
                     "WHERE p.id::int8 = ? " +
                     "WITH friend, min(array_length(path, 1)) AS distance " +
                     "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
@@ -106,7 +107,6 @@ public class AGDb extends Db {
                     "  unis, " +
                     "  friendCity, " +
                     "  distance " +
-                    "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
                     "RETURN " +
                     "  friend.id::int8 AS id, " +
                     "  friend.lastName AS lastName, " +
@@ -120,9 +120,8 @@ public class AGDb extends Db {
                     "  friend.speaks::jsonb AS languages, " +
                     "  friendCity.name AS cityName, " +
                     "  unis, " +
-                    "  companies " +
-                    "LIMIT ?";
-            ResultSet rs = client.executeQuery(query,
+                    "  companies ";
+            ResultSet rs = client.executeQuery(stmt,
                     ldbcQuery1.firstName(), ldbcQuery1.personId(), ldbcQuery1.limit(), ldbcQuery1.limit());
 
             List<LdbcQuery1Result> resultList = new ArrayList<>();
@@ -160,20 +159,19 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (p:Person)-[:knows]->(friend:Person)<-[:hasCreator]-(message:Message) " +
+            String stmt = 
+                    "-- " + ldbcQuery2.toString() +" \n" + 
+                    "MATCH (p:Person)-[:knows]->(friend:Person)<-[:hasCreator]-(message:Message) " +
                     "WHERE p.id::int8 = ? AND message.creationDate::int8 <= ? " +
+		    "WITH friend, message " +
+		    "ORDER BY message.creationDate::int8 DESC, message.id::int8 ASC LIMIT ? " +
                     "RETURN " +
                     "  friend.id::int8 AS personId, " +
                     "  friend.firstName AS personFirstName, " +
                     "  friend.lastName AS personLastName, " +
                     "  message.id::int8 AS messageId, " +
-                    "  CASE message.content is not null " +
-                    "    WHEN true THEN message.content " +
-                    "    ELSE message.imageFile " +
-                    "  END AS messageContent, " +
-                    "  message.creationDate::int8 AS messageCreationDate " +
-                    "ORDER BY messageCreationDate DESC, messageId::int8 ASC " +
-                    "LIMIT ?";
+                    "  COALESCE(message.content, message.imageFile), " +
+                    "  message.creationDate::int8 AS messageCreationDate";
 
             ResultSet rs = client.executeQuery(stmt, ldbcQuery2.personId(), ldbcQuery2.maxDate(), ldbcQuery2.limit());
 
@@ -199,46 +197,39 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
-                    "WHERE " +
-                    "  person.id::int8 = ?  " +
-                    "  AND id(person) <> id(friend) " +
-                    "WITH DISTINCT friend " +
-                    "MATCH (messageX:message4), (countryX:Place) " +
-                    "WHERE messageX.\"creatorID\"::graphid = id(friend) " +
-                    "  AND messageX.\"placeID\"::graphid = id(countryX) " +
-                    "  AND not exists ((friend)-[:isLocatedIn]->(:place)-[:isPartOf]->(countryX)) " +
-                    "  AND countryX.name = ? " +
-                    "  AND messageX.creationDate::int8 >= ? " +
-                    "  AND messageX.creationDate::int8 < ? " +
-                    "WITH friend, count(DISTINCT messageX) AS xCount " +
-                    "MATCH (messageY:message4), (countryY:Place) " +
-                    "WHERE " +
-                    "  id(friend) = messageY.\"creatorID\"::graphid " +
-                    "  and id(countryY) = messageY.\"placeID\"::graphid " +
-                    "  and countryY.name= ? " +
-                    "  AND not exists ((friend)-[:isLocatedIn]->(:place)-[:isPartOf]->(countryY)) " +
-                    "  AND messageY.creationDate::int8 >= ? " +
-                    "  AND messageY.creationDate::int8 < ? " +
-                    "WITH " +
-                    "  friend.id AS friendId, " +
-                    "  friend.firstName AS friendFirstName, " +
-                    "  friend.lastName AS friendLastName, " +
-                    "  xCount, " +
-                    "  count(DISTINCT messageY) AS yCount " +
-                    "RETURN " +
-                    "  friendId::int8, " +
-                    "  friendFirstName, " +
-                    "  friendLastName, " +
-                    "  xCount, " +
-                    "  yCount, " +
-                    "  xCount + yCount AS xyCount " +
-                    "ORDER BY xyCount DESC, friendId::int8 ASC " +
-                    "LIMIT ?";
-            java.util.Date endDate = DateUtils.endDate(ldbcQuery3.startDate(), ldbcQuery3.durationDays());
-            ResultSet rs = client.executeQuery(stmt, ldbcQuery3.personId(), ldbcQuery3.countryXName(),
-                    ldbcQuery3.startDate(), endDate, ldbcQuery3.countryYName(), ldbcQuery3.startDate(), endDate,
-                    ldbcQuery3.limit());
+            String stmt = 
+                    "-- " + ldbcQuery3.toString() +" \n" + 
+	            "MATCH (person:Person)-[:knows*1..2]-(friend:Person)<-[:hasCreator]-(messageX:Message)-[:isLocatedIn]->(countryX:Place) " +
+		    "WHERE person.id::int8 = ? AND person != friend " +
+		    "WITH DISTINCT friend "
+	            "MATCH (friend)<-[:hasCreator]-(messageX:Message)-[:isLocatedIn]->(countryX:Place {name: ?}) " +
+		    "WHERE not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryX)) " +
+		    "  AND messageX.creationDate::int8 >= ? " +
+		    "  AND messageX.creationDate::int8 < ? " +
+		    "WITH friend, count(DISTINCT messageX) AS xCount " +
+		    "MATCH (friend)<-[:hasCreator]-(messageY)-[:isLocatedIn]->(countryY:Place {name: ?}) " +
+		    "WHERE not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryY)) " +
+		    "  AND messageY.creationDate::int8 >= ? " +
+		    "  AND messageY.creationDate::int8 < ? " +
+		    "WITH " +
+		    "  friend, xCount, count(DISTINCT messageY) AS yCount " +
+		    "RETURN " +
+		    "  friend.id::int8 AS friendId, " +
+		    "  friend.firstName AS friendFirstName, " +
+		    "  friend.lastName AS friendLastName, " +
+		    "  friendId, " +
+		    "  friendFirstName, " +
+		    "  friendLastName, " +
+		    "  xCount, " +
+		    "  yCount, " +
+		    "  xCount + yCount AS xyCount " +
+		    "ORDER BY xyCount DESC, friendId::int8 ASC " +
+		    "LIMIT ?";
+	    java.util.Date endDate = DateUtils.endDate(ldbcQuery3.startDate(), ldbcQuery3.durationDays());
+	    ResultSet rs = client.executeQuery(stmt, ldbcQuery3.personId(), ldbcQuery3.countryXName(),
+			    ldbcQuery3.startDate(), endDate, ldbcQuery3.countryYName(), ldbcQuery3.startDate(), endDate,
+			    ldbcQuery3.limit());
+
             List<LdbcQuery3Result> resultList = new ArrayList<>();
             try {
                 while (rs.next()) {
@@ -261,38 +252,28 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-/*            String stmt = "MATCH (person:Person)-[:knows]-(:Person)<-[:hasCreator]-(post:Post)-[:hasTag]->(tag:Tag) " +
-                    "WHERE person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
-                    "OPTIONAL MATCH (tag)<-[:hasTag]-(oldPost:Post)-[:hasCreator]->(:Person)-[:knows]-(person) " +
-                    "WHERE oldPost.creationDate::int8 < ? " +
-                    "WITH tag, post, count(oldPost) AS oldPostCount " +
-                    "WHERE oldPostCount = 0 " +
-                    "RETURN " +
-                    "  tag.name AS tagName, " +
-                    "  count(post) AS postCount " +
-                    "ORDER BY postCount DESC, tagName ASC " +
-                    "LIMIT ?"; */
 
-            String stmt = "SELECT tagname, count(distinct postid) AS postcount FROM ( " +
-                          "        SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " +
-                          "        FROM " +
-                          "        ( " +
-                          "                MATCH (person:Person)-[:KNOWS]->(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
-                          "                WHERE " +
-                          "                person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
-                          "                RETURN " +
-                          "                post.id::int8 AS postid, tag.name AS tag " +
-                          "        ) T1 " +
-                          "        LEFT JOIN " +
-                          "        ( " +
-                          "                MATCH (person:Person)-[:KNOWS]->(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
-                          "                WHERE " +
-                          "                person.id::int8 = ? AND post.creationDate::int8 < ? " +
-                          "                RETURN " +
-                          "                post.id::int8 AS postid, tag.name AS tag " +
-                          "        ) T2 " +
-                          "        ON T1.tag = T2.tag " +
-                          "        GROUP BY T1.tag, T1.postid " +
+            String stmt = "-- " + ldbcQuery4.toString() +" \n" + 
+                          "SELECT tagname, count(distinct postid) AS postcount FROM ( " +
+                          "  SELECT T1.tag AS tagname, T1.postid AS postid, count(distinct T2.postid) AS oldPostCount " +
+                          "  FROM " +
+                          "  ( " +
+                          "    MATCH (person:Person)-[:KNOWS]->(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "    WHERE " +
+                          "    person.id::int8 = ? AND post.creationDate::int8 >= ? AND post.creationDate::int8 < ? " +
+                          "    RETURN " +
+                          "    post.id::int8 AS postid, tag.name AS tag " +
+                          "  ) T1 " +
+                          "  LEFT JOIN " +
+                          "  ( " +
+                          "    MATCH (person:Person)-[:KNOWS]->(:Person)<-[:hasCreatorPost]-(post:Post)-[:hasTagPost]->(tag:Tag) " +
+                          "    WHERE " +
+                          "    person.id::int8 = ? AND post.creationDate::int8 < ? " +
+                          "    RETURN " +
+                          "    post.id::int8 AS postid, tag.name AS tag " +
+                          "  ) T2 " +
+                          "  ON T1.tag = T2.tag " +
+                          "  GROUP BY T1.tag, T1.postid " +
                           ") A " +
                           "WHERE oldPostCount = 0 GROUP BY tagname " +
                           "ORDER BY postcount DESC, tagname ASC " +
@@ -323,17 +304,16 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*1..2]->(friend:Person)<-[membership:hasMember]-(forum:Forum) " +
+            String stmt = "-- " + ldbcQuery5.toString() +" \n" + 
+                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
                     "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
-                    "AND membership.\"joinDate\"::int8 > ? " +
-                    "WITH DISTINCT id(friend) AS friendgid, id(forum) AS forumgid, forum.id::int8 AS forumId, forum.title AS forumTitle " +
-                    "OPTIONAL MATCH (post:post4) " +
-                    "WHERE friendgid = post.\"creatorID\"::graphid and post.\"forumID\"::graphid = forumgid " +
-                    "WITH forumTitle, forumId, count(post) AS postCount " +
-                    "ORDER BY postCount DESC, forumId ASC " +
-                    "RETURN " +
-                    "  forumTitle, " +
-                    "  postCount " +
+		    "WITH DISTINCT friend " +
+		    "MATCH (friend)<-[membership:hasMember]-(forum:Forum) " +
+                    "WHERE membership.\"joinDate\"::int8 > ? " +
+                    "OPTIONAL MATCH (friend)<-[:hascreatorpost]-(post:post)<-[:containerof]-(forum) " +
+		    "WITH forum.id::int8 AS forumid, forum.title AS forumTitle, count(post) AS postcount " +
+		    "ORDER BY postCount DESC, forumid ASC " +
+		    "RETURN forumTitle, postCount " +
                     "LIMIT ?";
 
             ResultSet rs = client.executeQuery(stmt, ldbcQuery5.personId(), ldbcQuery5.minDate(), ldbcQuery5.limit());
@@ -360,16 +340,15 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
-                    "WHERE person.id::int8 = ? AND id(person) <> id(friend) " +
-                    "WITH DISTINCT id(friend) AS friendgid " +
-                    "MATCH (friendPost:Post4)-[:hasTagPost]->(knownTag:Tag) " +
-                    "WHERE friendPost.\"creatorID\"::graphid = friendgid " +
-                    "AND knownTag.name <> ? " +
-                    "AND exists((friendPost)-[:hasTagPost]->(:Tag {'name': ?})) " +
+            String stmt = "-- " + ldbcQuery6.toString() +" \n" + 
+                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
+                    "WHERE person.id::int8 = ? AND person != friend " +
+		    "WITH DISTINCT friend " +
+                    "MATCH (friend)<-[:hascreatorpost]-(friendPost:Post)-[:hasTagPost]->(knownTag:Tag) " +
+                    "WHERE knownTag.name <> ? AND exists((friendPost)-[:hasTagPost]->(:Tag {'name': ?})) " +
                     "RETURN " +
                     "  knownTag.name AS tagName, " +
-                    "  count(friendPost) AS postCount " +
+                    "  count(distinct id(friendPost)) AS postCount " +
                     "ORDER BY postCount DESC, tagName ASC " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery6.personId(),
@@ -395,7 +374,9 @@ public class AGDb extends Db {
         public void executeOperation(LdbcQuery7 ldbcQuery7, DbConnectionState dbConnectionState, ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
+            String stmt = 
+                    "-- " + ldbcQuery7.toString() +" \n" + 
+                    "MATCH (person:Person)<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "WITH  " +
                     "  liker.id::int8 AS personId,  " +
@@ -407,13 +388,10 @@ public class AGDb extends Db {
                     "  personId,  " +
                     "  personFirstName,  " +
                     "  personLastName,  " +
-                    "  (latestLike->>'likeTime')::int8 AS likeTime,  " +
-                    "  (latestLike->'msg'->>'id')::int8 AS messageId,  " +
-                    "  CASE latestLike->'msg'->>'content' is not null  " +
-                    "    WHEN true THEN latestLike->'msg'->>'content'  " +
-                    "    ELSE latestLike->'msg'->>'imagefile'  " +
-                    "  END AS messageContent,  " +
-                    "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
+                    "  (latestLike).likeTime::int8 AS likeTime,  " +
+                    "  (latestLike).msg.id::int8 AS messageId,  " +
+                    "  COALESCE((latestLike).msg.content, (latestLike).msg.content) AS messageContent, " +
+                    "  (latestLike).likeTime::int8 - (latestLike).msg.creationdate::int8) / (1000 * 60) AS latency,  " +
                     "  not exists((:Person {id: personId})-[:knows]-(:Person {id: otherId}))  " +
                     "ORDER BY likeTime DESC, personId ASC  " +
                     "LIMIT ?";
@@ -443,17 +421,18 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (p:Person)<-[:hasCreator]-(:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(person:Person) " +
+            String stmt = "-- " + ldbcQuery8.toString() +" \n" + 
+                    "MATCH (p:Person)<-[:hasCreator]-(:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(person:Person) " +
                     "WHERE p.id::int8 = ? " +
+		    "WITH person, c " +
+		    "ORDER BY c.creationDate::int8 DESC, c.id::int8 ASC LIMIT ? " +
                     "RETURN " +
                     "  person.id::int8 AS personId, " +
                     "  person.firstName AS personFirstName, " +
                     "  person.lastName AS personLastName, " +
                     "  c.creationDate::int8 AS commentCreationDate, " +
                     "  c.id::int8 AS commentId, " +
-                    "  c.content AS commentContent " +
-                    "ORDER BY commentCreationDate DESC, commentId ASC " +
-                    "LIMIT ?";
+                    "  c.content AS commentContent";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery8.personId(), ldbcQuery8.limit());
 
             List<LdbcQuery8Result> resultList = new ArrayList<>();
@@ -478,26 +457,21 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:KNOWS*1..2]->(friend:Person) " +
-                    "WHERE person.id::int8 = ? " +
-                    "WITH DISTINCT" +
-                    "   id(friend)::graphid AS friendid, " +
-                    "   friend.id::int8 AS personId, " +
-                    "   friend.firstName AS personFirstName, " +
-                    "   friend.lastName AS personLastName " +
-                    "MATCH (message:Message4) " +
-                    " WHERE message.creationDate::int8 < ? " +
-                    "   AND message.\"creatorID\"::graphid = friendid " +
-                    " RETURN " +
-                    "   personId, personFirstName, personLastName, " +
-                    "   message.id::int8 AS messageId, " +
-                    "   CASE message.content is not null " +
-                    "     WHEN true THEN message.content " +
-                    "     ELSE message.imageFile " +
-                    "   END AS messageContent, " +
-                    "   message.creationDate::int8 AS messageCreationDate " +
-                    " ORDER BY messageCreationDate DESC, messageId ASC " +
-                    " LIMIT ?" ;
+            String stmt = "-- " + ldbcQuery9.toString() +" \n" + 
+	            "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
+		    "WHERE person.id::int8 = ? " +
+		    "WITH DISTINCT friend " +
+		    "MATCH (friend)<-[:hasCreator]-(message:Message) " +
+		    "WHERE message.creationDate::int8 < ? " +
+		    "WITH friend, message " +
+		    "ORDER BY message.creationDate::int8 DESC, message.id::int8 ASC LIMIT ? " +
+		    "RETURN " +
+		    "  friend.id::int8 AS personId, " +
+		    "  friend.firstName AS personFirstName, " +
+		    "  friend.lastName AS personLastName, " +
+		    "  message.id::int8 AS messageId, " +
+		    "  COALESCE(message.content, message.imageFile) " +
+		    "  message.creationDate::int8 AS messageCreationDate";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery9.personId(), ldbcQuery9.maxDate(),
                     ldbcQuery9.limit());
 
@@ -524,47 +498,34 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows*2..2]->(friend:Person)-[:isLocatedInPerson]->(city:Place) " +
-                    "WHERE person.id::int8 = ? " +
-                    "  AND ((extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = ? AND extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) >= 21) OR " +
-                    "       (extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = (? % 12)+1 AND extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) < 22)) " +
-                    "  AND id(friend) <> id(person) " +
-                    "  AND not exists((friend)-[:knows]->(person)) " +
-                    "WITH DISTINCT " +
-                    "  friend.id::int8 AS personId, " +
-                    "  friend.firstName AS personFirstName, " +
-                    "  friend.lastName AS personLastName, " +
-                    "  friend.gender AS personGender, " +
-                    "  city.name AS personCityName, " +
-                    "  person.id::int8 AS startPersonId " +
-                    "OPTIONAL MATCH (f:Person)<-[:hasCreatorPost]-(post:Post) " +
-                    "WHERE f.id::int8 = personId " +
-                    "WITH " +
-                    "  personId, " +
-                    "  personFirstName, " +
-                    "  personLastName, " +
-                    "  personGender, " +
-                    "  personCityName, " +
-                    "  array_remove(array_agg(post.id::int8), NULL) posts, " +
-                    "  startPersonId " +
-                    "WITH " +
-                    "  personId, " +
-                    "  personFirstName, " +
-                    "  personLastName, " +
-                    "  personGender, " +
-                    "  personCityName, " +
-                    "  case posts = '{}' when true then 0 " +
-                    "  else array_length(posts, 1) end AS postCount, " +
-                    "  c10_fc(posts, startPersonId) AS commonPostCount " +
-                    "RETURN " +
-                    "  personId, " +
-                    "  personFirstName, " +
-                    "  personLastName, " +
-                    "  commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
-                    "  personGender, " +
-                    "  personCityName " +
-                    "ORDER BY commonInterestScore DESC, personId ASC " +
-                    "LIMIT ?";
+            String stmt = "-- " + ldbcQuery10.toString() +" \n" +
+              "MATCH (person:Person)-[:knows*2..2]->(friend:Person) " +
+              "WHERE person.id::int8 = ? " +
+              "  AND ((extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = ? " + 
+	      "    AND extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) >= 21) OR " +
+              "  (extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = (? % 12)+1 " + 
+	      "    AND extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) < 22)) " +
+              "  AND friend != person " +
+              "  AND not exists((friend)-[:knows]->(person)) " +
+              "WITH DISTINCT person.id as startPersonId, friend " +
+              "MATCH (friend)-[:isLocatedInPerson]->(city:Place) " +
+              "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post:Post) " +
+              "WITH " +
+              "  friend, array_remove(array_agg(post.id::int8), NULL) posts, startPersonId, city.name AS personCityName " +
+              "WITH " +
+              "  friend, 
+              "  CASE posts = '{}' WHEN TRUE then 0 " +
+              "  ELSE ARRAY_LENGTH(posts, 1) end AS postCount, " +
+              "  c10_fc(posts, startPersonId) AS commonPostCount " +
+              "RETURN " +
+              "  friend.id::int8 AS personId, " +
+              "  friend.firstName AS personFirstName, " +
+              "  friend.lastName AS personLastName, " +
+              "  commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
+              "  friend.gender AS personGender, " +
+              "  personCityName " +
+              "ORDER BY commonInterestScore DESC, personId ASC " +
+              "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery10.personId(), ldbcQuery10.month(), ldbcQuery10.month(),
                     ldbcQuery10.limit());
 
@@ -591,9 +552,9 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            client.execute("set enable_seqscan = off");
-            String stmt = "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
-                    "WHERE person.id::int8 = ? AND person.id != friend.id " +
+            String stmt = "-- " + ldbcQuery11.toString() +" \n" + 
+                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
+                    "WHERE person.id::int8 = ? AND person != friend " +
                     "WITH DISTINCT friend " +
                     "MATCH (friend)-[worksAt:workAt]->(company:Organization)-[:isLocatedInOrgan]->(:Place {'name': ?}) " +
                     "WHERE worksAt.\"workFrom\"::int < ? " +
@@ -615,10 +576,8 @@ public class AGDb extends Db {
                             rs.getString(4), rs.getInt(5)));
                 }
             } catch (SQLException e) {
-                client.execute("set enable_seqscan = on");
                 throw new AGClientException(e);
             }
-            client.execute("set enable_seqscan = on");
 
             resultReporter.report(0, resultList, ldbcQuery11);
         }
@@ -633,7 +592,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[:knows]->(friend:Person) " +
+            String stmt = "-- " + ldbcQuery12.toString() +" \n" + 
+                    "MATCH (person:Person)-[:knows]->(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "OPTIONAL MATCH " +
                     "  (friend)<-[:hasCreatorComment]-(c:\"Comment\")-[:replyOfPost]->(:Post)-[:hasTagPost]->(tag:Tag), " +
@@ -677,7 +637,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person1:Person), (person2:Person) " +
+            String stmt = "-- " + ldbcQuery13.toString() +" \n" + 
+                    "MATCH (person1:Person), (person2:Person) " +
                     "WHERE person1.id::int8 = ? AND person2.id::int8 = ? " +
                     "WITH shortestpath_vertex_ids(person1, person2) as vertex_ids " +
                     "RETURN " +
@@ -708,7 +669,8 @@ public class AGDb extends Db {
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
-            String stmt = "SELECT " +
+            String stmt = "-- " + ldbcQuery14.toString() +" \n" + 
+                    "SELECT " +
                     "  extract_ids(vertex_ids) AS pathNodeIds, " +
                     "  get_weight(vertex_ids) AS weight " +
                     "FROM allshortestpath_vertex_ids(?, ?) " +
@@ -739,7 +701,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (r:Person)-[:isLocatedInPerson]->(s:Place) " +
+            String stmt = "-- " + ldbcShortQuery1PersonProfile.toString() +" \n" + 
+                    "MATCH (r:Person)-[:isLocatedInPerson]->(s:Place) " +
                     "WHERE r.id::int8 = ? " +
                     "RETURN " +
                     "  r.firstName AS firstName, " +
@@ -779,16 +742,13 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)<-[:hasCreator]-(m:Message) " +
-                    "MATCH (m)-[:replyOf*0..]->(p:Post) " +
-                    "MATCH (p)-[:hasCreatorPost]->(c:Person) " +
+            String stmt = "-- " + ldbcShortQuery2PersonPosts.toString() +" \n" + 
+                    "MATCH (person:Person)<-[:hasCreator]-(m:\"Comment\"), " +
+                    "      (m)-[:replyOf*0..]->(p:Post)-[:hasCreatorPost]->(c:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "RETURN " +
                     "  m.id::int8 as messageId, " +
-                    "  CASE m.content is not null " +
-                    "    WHEN true THEN m.content " +
-                    "    ELSE m.imageFile " +
-                    "  END AS messageContent, " +
+                    "  COALESCE(m.content, m.imageFile), " +
                     "  m.creationDate::int8 AS messageCreationDate, " +
                     "  p.id::int8 AS originalPostId, " +
                     "  c.id::int8 AS originalPostAuthorId, " +
@@ -826,7 +786,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (person:Person)-[r:knows]->(friend:Person) " +
+            String stmt = "-- " + ldbcShortQuery3PersonFriends.toString() +" \n" + 
+                    "MATCH (person:Person)-[r:knows]->(friend:Person) " +
                     "WHERE person.id::int8 = ? " +
                     "RETURN " +
                     "  friend.id::int8 AS friendId, " +
@@ -861,13 +822,11 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message) " +
+            String stmt = "-- " + ldbcShortQuery4MessageContent.toString() +" \n" + 
+                    "MATCH (m:Message) " +
                     "WHERE m.id::int8 = ? " +
                     "RETURN " +
-                    "  CASE m.content is not null " +
-                    "    WHEN true THEN m.content " +
-                    "    ELSE m.imageFile " +
-                    "  END AS content, " +
+                    "  COALESCE(m.content, m.imageFile) " +
                     "  m.creationDate::int8 as creationDate";
             ResultSet rs = client.executeQuery(stmt, ldbcShortQuery4MessageContent.messageId());
 
@@ -895,7 +854,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message)-[:hasCreator]->(p:Person) " +
+            String stmt = "-- " + ldbcShortQuery5MessageCreator.toString() +" \n" + 
+                    "MATCH (m:Message)-[:hasCreator]->(p:Person) " +
                     "WHERE m.id::int8 = ? " +
                     "RETURN " +
                     "  p.id::int8 AS personId, " +
@@ -928,7 +888,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message)-[:replyOf*0..]->(p:Post)<-[:containerOf]-(f:Forum)-[:hasModerator]->(mod:Person) " +
+            String stmt = "-- " + ldbcShortQuery6MessageForum.toString() +" \n" + 
+                    "MATCH (m:Message)-[:replyOf*0..]->(p:Post)<-[:containerOf]-(f:Forum)-[:hasModerator]->(mod:Person) " +
                     "WHERE m.id::int8 = ? " +
                     "RETURN " +
                     "  f.id::int8 AS forumId, " +
@@ -963,7 +924,8 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
-            String stmt = "MATCH (m:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(p:Person) " +
+            String stmt = "-- " + ldbcShortQuery7MessageReplies.toString() +" \n" + 
+                    "MATCH (m:Message)<-[:replyOf]-(c:\"Comment\")-[:hasCreatorComment]->(p:Person) " +
                     "WHERE m.id::int8 = ? " +
                     "OPTIONAL MATCH (m)-[:hasCreator]->(a:Person)-[r:knows]->(p) " +
                     "RETURN " +

@@ -3,46 +3,46 @@ create graph ldbc;
 set graph_path = ldbc;
 
 -- Make Vertex Labels
-create vlabel Forum;
-create vlabel Message;
-create vlabel Post inherits (Message);
-create vlabel "Comment" inherits (Message);
-create vlabel Organization;
-create vlabel Person;
-create vlabel Place;
-create vlabel Tag;
-create vlabel TagClass;
+CREATE VLABEL Forum;
+CREATE VLABEL Message;
+CREATE VLABEL Post inherits (Message);
+CREATE VLABEL "Comment" inherits (Message);
+CREATE VLABEL Organization;
+CREATE VLABEL Person;
+CREATE VLABEL Place;
+CREATE VLABEL Tag;
+CREATE VLABEL TagClass;
 
 -- Make Edge Labels
-create elabel containerOf;
-create elabel hasCreator;
-create elabel hasCreatorPost inherits (hasCreator);
-create elabel hasCreatorComment inherits (hasCreator);
-create elabel hasInterest;
-create elabel hasMember;
-create elabel hasModerator;
-create elabel hasTag;
-create elabel hasTagPost inherits (hasTag);
-create elabel hasTagComment inherits (hasTag);
-create elabel hasTagForum inherits (hasTag);
-create elabel hasType;
-create elabel isLocatedIn;
-create elabel isLocatedInOrgan inherits (isLocatedIn);
-create elabel isLocatedInPerson inherits (isLocatedIn);
-create elabel isLocatedInMsg inherits (isLocatedIn);
-create elabel isLocatedInPost inherits (isLocatedInMsg);
-create elabel isLocatedInComment inherits (isLocatedInMsg);
-create elabel isPartOf;
-create elabel isSubclassOf;
-create elabel knows;
-create elabel likes;
-create elabel likesPost inherits (likes);
-create elabel likesComment inherits (likes);
-create elabel replyOf;
-create elabel replyOfPost inherits (replyOf);
-create elabel replyOfComment inherits (replyOf);
-create elabel studyAt;
-create elabel workAt;
+CREATE ELABEL containerOf;
+CREATE ELABEL hasCreator;
+CREATE ELABEL hasCreatorPost inherits (hasCreator);
+CREATE ELABEL hasCreatorComment inherits (hasCreator);
+CREATE ELABEL hasInterest;
+CREATE ELABEL hasMember;
+CREATE ELABEL hasModerator;
+CREATE ELABEL hasTag;
+CREATE ELABEL hasTagPost inherits (hasTag);
+CREATE ELABEL hasTagComment inherits (hasTag);
+CREATE ELABEL hasTagForum inherits (hasTag);
+CREATE ELABEL hasType;
+CREATE ELABEL isLocatedIn;
+CREATE ELABEL isLocatedInOrgan inherits (isLocatedIn);
+CREATE ELABEL isLocatedInPerson inherits (isLocatedIn);
+CREATE ELABEL isLocatedInMsg inherits (isLocatedIn);
+CREATE ELABEL isLocatedInPost inherits (isLocatedInMsg);
+CREATE ELABEL isLocatedInComment inherits (isLocatedInMsg);
+CREATE ELABEL isPartOf;
+CREATE ELABEL isSubclassOf;
+CREATE ELABEL knows;
+CREATE ELABEL likes;
+CREATE ELABEL likesPost inherits (likes);
+CREATE ELABEL likesComment inherits (likes);
+CREATE ELABEL replyOf;
+CREATE ELABEL replyOfPost inherits (replyOf);
+CREATE ELABEL replyOfComment inherits (replyOf);
+CREATE ELABEL studyAt;
+CREATE ELABEL workAt;
 
 -- Make Unlogged
 alter vlabel forum set unlogged;
@@ -1068,35 +1068,6 @@ create unique index on ldbc.Tag (id);
 create unique index on ldbc.TagClass (id);
 
 -- edges
-create index on ldbc.containerOf (id);
-create index on ldbc.hasCreator (id);
-create index on ldbc.hasCreatorPost (id);
-create index on ldbc.hasCreatorComment (id);
-create index on ldbc.hasInterest (id);
-create index on ldbc.hasMember (id);
-create index on ldbc.hasModerator (id);
-create index on ldbc.hasTag (id);
-create index on ldbc.hasTagPost (id);
-create index on ldbc.hasTagComment (id);
-create index on ldbc.hasTagForum (id);
-create index on ldbc.hasType (id);
-create index on ldbc.isLocatedIn (id);
-create index on ldbc.isLocatedInOrgan (id);
-create index on ldbc.isLocatedInPost (id);
-create index on ldbc.isLocatedInComment (id);
-create index on ldbc.isLocatedInPerson (id);
-create index on ldbc.isPartOf (id);
-create index on ldbc.isSubclassOf (id);
-create index on ldbc.knows (id);
-create index on ldbc.likes (id);
-create index on ldbc.likesPost (id);
-create index on ldbc.likesComment (id);
-create index on ldbc.replyOf (id);
-create index on ldbc.replyOfPost (id);
-create index on ldbc.replyOfComment (id);
-create index on ldbc.studyAt (id);
-create index on ldbc.workAt (id);
-
 create index on ldbc.containerOf (start, "end", id);
 create index on ldbc.hasCreator (start, "end", id);
 create index on ldbc.hasCreatorPost (start, "end", id);
@@ -1165,36 +1136,7 @@ CREATE PROPERTY INDEX ON message ( (creationDate::int8) DESC, (id::int8) ASC );
 CREATE PROPERTY INDEX ON post ( (creationDate::int8) DESC, (id::int8) ASC );
 CREATE PROPERTY INDEX ON "Comment" ( (creationDate::int8) DESC, (id::int8) ASC );
 
--- pre_eval weights
-DROP TABLE c14_weight;
-CREATE UNLOGGED TABLE c14_weight(p1 int8, p2 int8, weight double precision);
-INSERT INTO c14_weight
-    SELECT p1, p2, SUM(inc) FROM (
-        SELECT
-            CASE when rep_creator < org_creator
-                THEN rep_creator ELSE org_creator END AS p1,
-            CASE when rep_creator < org_creator
-                THEN org_creator ELSE rep_creator END AS p2,
-            inc
-        FROM
-		(
-            MATCH
-            (p1:Person)<-[:hasCreatorComment]-(c:"Comment")-[:replyOfPost]->(m:Post)-[:hasCreatorPost]->(p2:Person)
-			, (p1:Person)-[:knows]->(p2:Person)
-			RETURN p1.id::int8 AS rep_creator, p2.id::int8 AS org_creator, 1.0 AS inc
-            UNION ALL
-            MATCH
-            (p1:Person)<-[:hasCreatorComment]-(c:"Comment")-[:replyOfComment]->(m:"Comment")-[:hasCreatorComment]->(p2:Person)
-			, (p1:Person)-[:knows]->(p2:Person)
-			RETURN p1.id::int8 AS rep_creator, p2.id::int8 AS org_creator, 0.5
-        ) AS x
-    ) AS x
-    GROUP BY p1, p2;
-CREATE UNIQUE INDEX ON c14_weight(p1, p2);
-ALTER TABLE c14_weight SET LOGGED;
-
 -- Analyze vertices
-VACUUM ANALYZE ldbc.post4;
 VACUUM ANALYZE ldbc.forum;
 VACUUM ANALYZE ldbc.message;
 VACUUM ANALYZE ldbc.post;
@@ -1236,4 +1178,33 @@ VACUUM ANALYZE ldbc.studyAt;
 VACUUM ANALYZE ldbc.workAt;
 
 CREATE EXTENSION pg_prewarm;
-SELECT PG_PREWARM(c.oid) from pg_class c left join pg_namespace n on n.oid = c.relnamespace where nspname = 'ldbc' and (relkind = 'i' OR relkind = 'r');
+SELECT count(*) FROM (SELECT PG_PREWARM(c.oid) from pg_class c left join pg_namespace n on n.oid = c.relnamespace where nspname = 'ldbc' and (relkind = 'i' OR relkind = 'r')) A;
+
+-- pre_eval weights
+DROP TABLE c14_weight;
+CREATE UNLOGGED TABLE c14_weight(p1 int8, p2 int8, weight double precision);
+INSERT INTO c14_weight
+    SELECT p1, p2, SUM(inc) FROM (
+        SELECT
+            CASE when rep_creator < org_creator
+                THEN rep_creator ELSE org_creator END AS p1,
+            CASE when rep_creator < org_creator
+                THEN org_creator ELSE rep_creator END AS p2,
+            inc
+        FROM
+		(
+            MATCH
+            (p1:Person)<-[:hasCreatorComment]-(c)-[:replyOfPost]->(m)-[:hasCreatorPost]->(p2:Person)
+			, (p1:Person)-[:knows]->(p2:Person)
+			RETURN p1.id::int8 AS rep_creator, p2.id::int8 AS org_creator, 1.0 AS inc
+            UNION ALL
+            MATCH
+            (p1:Person)<-[:hasCreatorComment]-(c)-[:replyOfComment]->(m)-[:hasCreatorComment]->(p2:Person)
+			, (p1:Person)-[:knows]->(p2:Person)
+			RETURN p1.id::int8 AS rep_creator, p2.id::int8 AS org_creator, 0.5
+        ) AS x
+    ) AS x
+    GROUP BY p1, p2;
+CREATE UNIQUE INDEX ON c14_weight(p1, p2);
+ALTER TABLE c14_weight SET LOGGED;
+

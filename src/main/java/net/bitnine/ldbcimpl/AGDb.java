@@ -354,7 +354,7 @@ public class AGDb extends Db {
                     "WITH DISTINCT friend, forum " +
                     "OPTIONAL MATCH (post:Post) " +
                     "WHERE id(friend) = post.gid_creator::graphid and id(forum) = post.gid_forumID::graphid " +
-                    "WITH forum.name As forumTitle, forum.id as forumId, count(post) AS postCount " +
+                    "WITH forum.title As forumTitle, forum.id::int8 as forumId, count(post) AS postCount " +
                     "ORDER BY postCount DESC, forumId ASC " +
                     "RETURN " +
                     "  forumTitle, postCount " +
@@ -426,19 +426,25 @@ public class AGDb extends Db {
                     "MATCH (person:Person), (message:Message)<-[l:likes]-(liker:Person) " +
                     "WHERE person.id::int8 = " + ldbcQuery7.personId() + " AND id(person) = message.gid_creator::graphid " +
                     "WITH  " +
-					"  person, liker, " +
-                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', l.\"creationDate\"::int8, 'id', message.id::int8))) AS latestLike " +
+                    "  liker.id::int8 AS personId,  " +
+                    "  liker.firstName AS personFirstName, " +
+                    "  liker.lastName AS personLastName, " +
+                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', l.\"creationDate\"::int8, 'id', message.id::int8))) AS latestLike,  " +
+                    "  person.id::int8 AS otherId " +
                     "WITH  " +
-					"  person, liker, " +
+                    "  personId,  " +
+                    "  personFirstName,  " +
+                    "  personLastName,  " +
                     "  (latestLike->>'likeTime')::int8 AS likeTime, " +
                     "  (latestLike->'msg'->>'id')::int8 AS messageId, " +
                     "  ((latestLike->>'likeTime')::int8 - (latestLike->'msg'->>'creationdate')::int8) / (1000 * 60) AS latency,  " +
-                    "  not exists((:Person {id: liker.id})-[:knows]->(:Person {id: person.id})) isknow " +
+                    "  not exists((:Person {id: personId})-[:knows]->(:Person {id: otherId})) isknow " +
+                    "ORDER BY likeTime DESC, personId ASC " +
                     "LIMIT " + ldbcQuery7.limit() + " " +
                     "RETURN  " +
-                    "  liker.id AS personId,  " +
-                    "  liker.firstName AS personFirstName,  " +
-                    "  liker.lastName AS personLastName,  " +
+                    "  personId,  " +
+                    "  personFirstName,  " +
+                    "  personLastName,  " +
                     "  likeTime,  " +
                     "  messageId,  " +
                     "  (SELECT CASE me.content is not null  " +
@@ -448,6 +454,7 @@ public class AGDb extends Db {
                     "  latency,  " +
                     "  isknow " +
                     "ORDER BY likeTime DESC, personId ASC  ";
+
             ResultSet rs = client.executeQuery(stmt); //, ldbcQuery7.personId(), ldbcQuery7.limit());
             List<LdbcQuery7Result> resultList = new ArrayList<>();
             try {
@@ -816,10 +823,10 @@ public class AGDb extends Db {
                     "  AND p.gid_creator::graphid = id(c) " +
                     "RETURN " +
                     "  m.id::int8 as messageId, " +
-                    "  CASE m.content is not null " +
-                    "    WHEN true THEN m.content " +
-                    "    ELSE m.imageFile " +
-                    "  END AS messageContent, " +
+                    "(SELECT CASE me.content is not null " +
+                    "    WHEN true THEN me.content " +
+                    "    ELSE me.imageFile " +
+                    "  END FROM msgext me WHERE me.id = m.id::int8) messageContent, " +
                     "  m.creationDate::int8 AS messageCreationDate, " +
                     "  p.id::int8 AS originalPostId, " +
                     "  c.id::int8 AS originalPostAuthorId, " +
@@ -1364,7 +1371,7 @@ public class AGDb extends Db {
                                ldbcUpdate7AddComment.authorPersonId(), ldbcUpdate7AddComment.countryId(),
 							   ldbcUpdate7AddComment.replyToCommentId());
             } else {
-				stmt += ", replyOfPost: ?});";
+				stmt += ", replyOfPost: ?})-[:replyof]->(m);";
                 client.execute(stmt, ldbcUpdate7AddComment.authorPersonId(), ldbcUpdate7AddComment.countryId(), ldbcUpdate7AddComment.replyToPostId(),
 							   ldbcUpdate7AddComment.commentId(), ldbcUpdate7AddComment.creationDate().getTime(), 
                                ldbcUpdate7AddComment.authorPersonId(), ldbcUpdate7AddComment.countryId(),

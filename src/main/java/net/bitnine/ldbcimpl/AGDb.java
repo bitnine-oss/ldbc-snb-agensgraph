@@ -342,10 +342,12 @@ public class AGDb extends Db {
                     "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
                     "WHERE person.id::int8 = ? AND id(person) != id(friend) " +
 		            "WITH DISTINCT friend " +
-                    "MATCH (friend)<-[:hascreatorpost]-(friendPost)-[:hasTagPost]->(knownTag:Tag) " +
-                    "WHERE knownTag.name <> ? AND exists((friendPost)-[:hasTagPost]->(:Tag {'name': ?})) " +
+                    "MATCH (friend)<-[:hascreatorpost]-(friendPost) " +
+		    "MATCH (friendPost)-[:hasTagPost]->(:Tag {'name': ?}) " +
+		    "MATCH (friendPost)-[:hasTagPost]->(commonTag:Tag) " +
+                    "WHERE knownTag.name <> ? " +
                     "RETURN " +
-                    "  knownTag.name AS tagName, " +
+                    "  commonTag.name AS tagName, " +
                     "  count(distinct id(friendPost)) AS postCount " +
                     "ORDER BY postCount DESC, tagName ASC " +
                     "LIMIT ?";

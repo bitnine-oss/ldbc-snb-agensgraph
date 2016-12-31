@@ -376,25 +376,21 @@ public class AGDb extends Db {
 
             String stmt = 
                     "-- " + ldbcQuery7.toString() +" \n" + 
-                    "MATCH (person:Person)<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
-                    "WHERE person.id::int8 = ? " +
-                    "WITH  " +
-                    "  liker.id::int8 AS personId,  " +
-                    "  liker.firstName AS personFirstName, " +
-                    "  liker.lastName AS personLastName, " +
-                    "  c7(array_agg(jsonb_build_object('msg', to_jsonb(message), 'likeTime', l.\"creationDate\"::int8, 'id', message.id::int8))) AS latestLike,  " +
-                    "  person.id::int8 AS otherId " +
-                    "RETURN  " +
-                    "  personId,  " +
-                    "  personFirstName,  " +
-                    "  personLastName,  " +
-                    "  (latestLike).\"likeTime\"::int8 AS likeTime,  " +
-                    "  (latestLike).msg.id::int8 AS messageId,  " +
-                    "  COALESCE((latestLike).msg.content, (latestLike).msg.imagefile) AS messageContent, " +
-                    "  ((latestLike).\"likeTime\"::int8 - (latestLike).msg.creationdate::int8) / (1000 * 60) AS latency,  " +
-                    "  not exists((:Person {id: personId})-[:knows]->(:Person {id: otherId}))  " +
-                    "ORDER BY likeTime DESC, personId ASC  " +
-                    "LIMIT ?";
+              "MATCH (person:Person)<-[:hasCreator]-(message:Message)<-[l:likes]-(liker:Person) " +
+              "WHERE person.id::int8 = ? " +
+              "WITH DISTINCT ON (id(liker)) liker, message, l.\"creationDate\"::int8 AS likeTime, person " +
+              "ORDER BY id(liker), likeTime DESC " +
+              "RETURN " +
+              "  liker.Id::int8 AS personId, " +
+              "  liker.FirstName, " +
+              "  liker.LastName, " +
+              "  likeTime, " +
+              "  message.id::int8 AS messageId, " +
+              "  COALESCE(message.content, message.imagefile) AS messageContent, " +
+              "  (likeTime - message.creationdate::int8) / (1000 * 60) AS latency, " +
+              "  not exists((person)-[:knows]->(liker)) " +
+              "ORDER BY likeTime DESC, personId ASC " +
+              "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery7.personId(), ldbcQuery7.limit());
 
             List<LdbcQuery7Result> resultList = new ArrayList<>();

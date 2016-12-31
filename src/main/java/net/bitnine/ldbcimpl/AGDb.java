@@ -200,16 +200,16 @@ public class AGDb extends Db {
 
             String stmt = 
               "-- " + ldbcQuery3.toString() +" \n" + 
-	          "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " + 
+	          "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " + 
 		      "WHERE person.id::int8 = ? AND id(person) != id(friend) " +
 		      "WITH DISTINCT friend " +
-	          "MATCH (friend)<-[:hasCreator]-(messageX:Message)-[:isLocatedIn]->(countryX:Place {name: ?}) " +
-		      "WHERE not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryX)) " +
+	          "MATCH (friend)<-[:hasCreator]-(messageX:Message)-[:isLocatedInMsg]->(countryX:Place {name: ?}) " +
+		      "WHERE not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryX)) " +
 		      "  AND messageX.creationDate::int8 >= ? " +
 		      "  AND messageX.creationDate::int8 < ? " +
 		      "WITH friend, count(DISTINCT messageX) AS xCount " +
-		      "MATCH (friend)<-[:hasCreator]-(messageY)-[:isLocatedIn]->(countryY:Place {name: ?}) " +
-		      "WHERE not exists ((friend)-[:isLocatedIn]->()-[:isPartOf]->(countryY)) " +
+		      "MATCH (friend)<-[:hasCreator]-(messageY:Message)-[:isLocatedInMsg]->(countryY:Place {name: ?}) " +
+		      "WHERE not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryY)) " +
 		      "  AND messageY.creationDate::int8 >= ? " +
 		      "  AND messageY.creationDate::int8 < ? " +
 		      "WITH " +
@@ -303,13 +303,13 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery5.toString() +" \n" + 
-                    "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
+                    "MATCH (person:Person)-[:knows*1..2]->(friend) " +
                     "WHERE person.id::int8 = ? AND id(person) != id(friend) " +
 		    "WITH DISTINCT friend " +
 		    "MATCH (friend)<-[membership:hasMember]-(forum:Forum) " +
                     "WHERE membership.\"joinDate\"::int8 > ? " +
-                    "OPTIONAL MATCH (friend)<-[:hascreatorpost]-(post:post)<-[:containerof]-(forum) " +
-		    "WITH forum.id::int8 AS forumid, forum.title AS forumTitle, count(post) AS postcount " +
+                    "OPTIONAL MATCH (friend)<-[:hascreatorpost]-(post)<-[:containerof]-(forum) " +
+		    "WITH forum.id::int8 AS forumid, forum.title AS forumTitle, count(id(post)) AS postcount " +
 		    "ORDER BY postCount DESC, forumid ASC " +
 		    "RETURN forumTitle, postCount " +
                     "LIMIT ?";
@@ -345,7 +345,7 @@ public class AGDb extends Db {
                     "MATCH (friend)<-[:hascreatorpost]-(friendPost) " +
 		    "MATCH (friendPost)-[:hasTagPost]->(:Tag {'name': ?}) " +
 		    "MATCH (friendPost)-[:hasTagPost]->(commonTag:Tag) " +
-                    "WHERE knownTag.name <> ? " +
+                    "WHERE commonTag.name <> ? " +
                     "RETURN " +
                     "  commonTag.name AS tagName, " +
                     "  count(distinct id(friendPost)) AS postCount " +
@@ -392,7 +392,7 @@ public class AGDb extends Db {
                     "  (latestLike).msg.id::int8 AS messageId,  " +
                     "  COALESCE((latestLike).msg.content, (latestLike).msg.imagefile) AS messageContent, " +
                     "  ((latestLike).\"likeTime\"::int8 - (latestLike).msg.creationdate::int8) / (1000 * 60) AS latency,  " +
-                    "  not exists((:Person {id: personId})-[:knows]-(:Person {id: otherId}))  " +
+                    "  not exists((:Person {id: personId})-[:knows]->(:Person {id: otherId}))  " +
                     "ORDER BY likeTime DESC, personId ASC  " +
                     "LIMIT ?";
             ResultSet rs = client.executeQuery(stmt, ldbcQuery7.personId(), ldbcQuery7.limit());
@@ -458,7 +458,7 @@ public class AGDb extends Db {
             AGClient client = ((AGDbConnectionState)dbConnectionState).getClent();
 
             String stmt = "-- " + ldbcQuery9.toString() +" \n" + 
-	            "MATCH (person:Person)-[:knows*1..2]-(friend:Person) " +
+	            "MATCH (person:Person)-[:knows*1..2]->(friend:Person) " +
 		    "WHERE person.id::int8 = ? " +
 		    "WITH DISTINCT friend " +
 		    "MATCH (friend)<-[:hasCreator]-(message:Message) " +

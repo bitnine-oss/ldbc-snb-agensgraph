@@ -500,32 +500,22 @@ public class AGDb extends Db {
 
             String stmt = "-- " + ldbcQuery10.toString() +" \n" +
               "MATCH (person:Person)-[:knows*2..2]->(friend:Person) " +
-              "WHERE person.id::int8 = ? " +
-              "  AND ((extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = ? " + 
-	      "    AND extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) >= 21) OR " +
-              "  (extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = (? % 12)+1 " + 
-	      "    AND extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) < 22)) " +
-              "  AND id(friend) != id(person) " +
-              "  AND not exists((friend)-[:knows]->(person)) " +
-              "WITH DISTINCT person.id::int8 as startPersonId, friend " +
+              "WHERE person.id::int8 = ? AND " +
+              "((extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = ? AND " +
+              "extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) >= 21) OR " +
+              "(extract(month from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) = (? % 12)+1 AND " +
+              "extract(day from (to_timestamp(friend.birthday::int8 / 1000) at time zone 'KST')) < 22)) AND " +
+              "id(friend) != id(person) AND not exists((friend)-[:knows]->(person)) " +
+              "WITH DISTINCT person, friend " +
               "MATCH (friend)-[:isLocatedInPerson]->(city:Place) " +
-              "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post:Post) " +
-              "WITH " +
-              "  friend, array_remove(array_agg(post.id::int8), NULL) posts, startPersonId, city.name AS personCityName " +
-              "WITH " +
-              "  friend, personCityName, " +
-              "  CASE posts = '{}' WHEN TRUE then 0 " +
-              "  ELSE ARRAY_LENGTH(posts, 1) end AS postCount, " +
-              "  c10_fc(posts, startPersonId) AS commonPostCount " +
-              "RETURN " +
-              "  friend.id::int8 AS personId, " +
-              "  friend.firstName AS personFirstName, " +
-              "  friend.lastName AS personLastName, " +
-              "  commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
-              "  friend.gender AS personGender, " +
-              "  personCityName " +
-              "ORDER BY commonInterestScore DESC, personId ASC " +
-              "LIMIT ?";
+              "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post) " +
+              "WITH   person, friend, city.name AS personCityName, count(distinct id(post)) AS postCount " +
+              "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post)-[:hasTagPost]->()<-[:hasInterest]-(person) " +
+              "WITH   friend, personCityName, postCount, count(distinct id(post)) AS commonPostCount " +
+              "RETURN friend.id::int8 AS personId, friend.firstName AS personFirstName, " +
+              "friend.lastName AS personLastName, commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
+              "friend.gender AS personGender, personCityName ORDER BY commonInterestScore DESC, personId ASC LIMIT ? ";
+
             ResultSet rs = client.executeQuery(stmt, ldbcQuery10.personId(), ldbcQuery10.month(), ldbcQuery10.month(),
                     ldbcQuery10.limit());
 

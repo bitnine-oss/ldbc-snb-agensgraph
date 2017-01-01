@@ -730,8 +730,9 @@ public class AGDb extends Db {
 
             String stmt = "-- " + ldbcShortQuery2PersonPosts.toString() +" \n" + 
                     "MATCH (person:Person)<-[:hasCreator]-(m:message)" +
-					"MATCH (m)-[:replyOf*0..]->(p:Post)-[:hasCreatorPost]->(c:Person) " +
                     "WHERE person.id::int8 = ? " +
+                    "WITH m ORDER BY m.creationDate::int8 DESC LIMIT ? " + 
+                    "MATCH (m)-[:replyOf*0..]->(p:Post)-[:hasCreatorPost]->(c:Person) " +
                     "RETURN " +
                     "  m.id::int8 as messageId, " +
                     "  COALESCE(m.content, m.imageFile), " +
@@ -745,6 +746,7 @@ public class AGDb extends Db {
 
             ResultSet rs = client.executeQuery(stmt,
                     ldbcShortQuery2PersonPosts.personId(),
+                    ldbcShortQuery2PersonPosts.limit(),
                     ldbcShortQuery2PersonPosts.limit());
 
             List<LdbcShortQuery2PersonPostsResult> resultList = new ArrayList<>();

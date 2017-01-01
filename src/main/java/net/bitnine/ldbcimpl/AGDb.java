@@ -505,9 +505,8 @@ public class AGDb extends Db {
               "WITH DISTINCT person, friend " +
               "MATCH (friend)-[:isLocatedInPerson]->(city:Place) " +
               "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post) " +
-              "WITH   person, friend, city.name AS personCityName, count(distinct id(post)) AS postCount " +
-              "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post)-[:hasTagPost]->()<-[:hasInterest]-(person) " +
-              "WITH   friend, personCityName, postCount, count(distinct id(post)) AS commonPostCount " +
+              "WITH   person, friend, city.name AS personCityName, post, exists((post)-[:hasTagPost]->()<-[:hasInterest]-(person))::int AS common " +
+              "WITH   friend, personCityName, count(distinct id(post)) AS postCount, sum(common) AS commonPostCount " +
               "RETURN friend.id::int8 AS personId, friend.firstName AS personFirstName, " +
               "friend.lastName AS personLastName, commonPostCount - (postCount - commonPostCount) AS commonInterestScore, " +
               "friend.gender AS personGender, personCityName ORDER BY commonInterestScore DESC, personId ASC LIMIT ? ";

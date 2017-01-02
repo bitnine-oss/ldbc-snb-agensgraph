@@ -406,8 +406,8 @@ public class AGDb extends Db {
                     "WITH DISTINCT friend.id::int8 AS friendId " +
                     "MATCH (friendPost:Post)-[:hasTagPost]->(knownTag:Tag) " +
                     "WHERE friendPost.creator::int8 = friendId " +
-                    "AND knownTag.name <> ? " +
-                    "AND exists((friendPost)-[:hasTagPost]->(:Tag {'name': ?})) " +
+                    "  AND knownTag.name <> ? " +
+                    "MATCH (friendPost)-[:hasTagPost]->(:Tag {'name': ?}) " +
                     "RETURN " +
                     "  knownTag.name AS tagName, " +
                     "  count(friendPost) AS postCount " +

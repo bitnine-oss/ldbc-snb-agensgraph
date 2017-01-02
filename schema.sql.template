@@ -593,8 +593,8 @@ create foreign table fdwKnows
 load from fdwKnows as row
 match (r:Person), (s:Person)
 where (r).id::int8 = (row).person1Id and (s).id::int8 = (row).person2Id
-create (r)-[:knows {'creationDate': (row).creationDate}]->(s)
-create (s)-[:knows {'creationDate': (row).creationDate}]->(r);
+create (r)-[:knows {'creationDate': (row).creationDate, 'person1id': (row).person1id, 'person2id': (row).person2id}]->(s)
+create (s)-[:knows {'creationDate': (row).creationDate, 'person1id': (row).person2id, 'person2id': (row).person1id}]->(r);
 
 --- likes (post)
 \set file_name :source_path/person_likes_post_0_0.csv
@@ -669,7 +669,7 @@ create foreign table fdwStudyAt
 load from fdwStudyAt as row
 match (r:Person), (s:Organization)
 where (r).id::int8 = (row).personId and (s).id::int8 = (row).organId
-create (r)-[:studyAt {'classYear': (row).classYear}]->(s);
+create (r)-[:studyAt {'classYear': (row).classYear, 'personid': (row).personId, 'organid': (row).organId}]->(s);
 
 --- workAt
 \set file_name :source_path/person_workAt_organisation_0_0.csv
@@ -694,7 +694,7 @@ create foreign table fdwWorkAt
 load from fdwWorkAt as row
 match (r:Person), (s:Organization)
 where (r).id::int8 = (row).personId and (s).id::int8 = (row).organId
-create (r)-[:workAt {'workFrom': (row).workFrom}]->(s);
+create (r)-[:workAt {'workFrom': (row).workFrom, 'personid': (row).personId, 'organid': (row).organId}]->(s);
 
 --- hasType
 \set file_name :source_path/tag_hasType_tagclass_0_0.csv
@@ -848,6 +848,16 @@ create property index comment_replyofcomment_idx
 
 create unique index on ldbc.hasMember (
 	"end", ((properties #>> '{joinDate}'::text[])::int8), start, id);
+
+create index on ldbc.knows (
+	 ((properties #>> '{person1id}'::text[])::int8)
+	,((properties #>> '{person2id}'::text[])::int8));
+
+create index on ldbc.workAt (
+	 ((properties #>> '{personid}'::text[])::int8));
+
+create index on ldbc.studyAt (
+	 ((properties #>> '{personid}'::text[])::int8));
 
 --create index on ldbc.person (((properties #>> '{place}'::text[])::int8));
 --

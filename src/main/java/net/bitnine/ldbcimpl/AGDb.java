@@ -77,57 +77,72 @@ public class AGDb extends Db {
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState) dbConnectionState).getClent();
 
-            String stmt = "-- " + ldbcQuery1.toString() +" \n" + 
-                    "MATCH (p:Person)-[path:knows*..3]->(friend:Person {'firstname': ?}) " +
-                    "WHERE p.id::int8 = ? " +
-                    "WITH friend, min(array_length(path, 1)) AS distance " +
-                    "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
-                    "LIMIT ? " +
-                    "MATCH (friend), (friendCity:Place) " +
-                    "WHERE friend.place::int8 = friendCity.id::int8 " +
-                    "OPTIONAL MATCH (friend)-[studyAt:studyAt]->(uni:Organization), (uniCity:Place) " +
-                    "WHERE uni.place::int8 = uniCity.id::int8 " +
-                    "WITH " +
-                    "  friend, " +
-                    "  jsonb_agg( " +
-                    "    CASE uni.name is null " +
-                    "      WHEN true THEN 'null'::jsonb " +
-                    "      ELSE array_to_json(array[uni.name, studyAt.\"classYear\", uniCity.name])::jsonb " +
-                    "    END " +
-                    "  ) AS unis, " +
-                    "  friendCity, " +
-                    "  distance " +
-                    "OPTIONAL MATCH (friend)-[worksAt:workAt]->(company:Organization), (companyCountry:Place) " +
-                    "WHERE company.place::int8 = companyCountry.id::int8 " +
-                    "WITH " +
-                    "  friend, " +
-                    "  jsonb_agg( " +
-                    "    CASE company.name is null " +
-                    "      WHEN true THEN 'null'::jsonb " +
-                    "      ELSE array_to_json(array[company.name, worksAt.\"workFrom\", companyCountry.name])::jsonb " +
-                    "    END " +
-                    "  ) AS companies, " +
-                    "  unis, " +
-                    "  friendCity, " +
-                    "  distance " +
-                    "ORDER BY distance ASC, friend.lastName ASC, friend.id::int8 ASC " +
-                    "RETURN " +
-                    "  friend.id::int8 AS id, " +
-                    "  friend.lastName AS lastName, " +
-                    "  distance, " +
-                    "  friend.birthday::int8 AS birthday, " +
-                    "  friend.creationDate::int8 AS creationDate, " +
-                    "  friend.gender AS gender, " +
-                    "  friend.browserUsed AS browser, " +
-                    "  friend.locationIp AS locationIp, " +
-                    "  friend.email::jsonb AS emails, " +
-                    "  friend.speaks::jsonb AS languages, " +
-                    "  friendCity.name AS cityName, " +
-                    "  unis, " +
-                    "  companies " +
-                    "LIMIT ?";
+            String stmt = "-- " + ldbcQuery1.toString() +" \n" +
+                    "SELECT " +
+                    "	p3f.id, " +
+                    "	(friend.properties->>'lastname') AS lastname, " +
+                    "	distance, " +
+                    "	(friend.properties->>'birthday')::int8 AS birthday, " +
+                    "	(friend.properties->>'creationdate')::int8 AS creationDate, " +
+                    "	(friend.properties->>'gender') AS gender, " +
+                    "	(friend.properties->>'browserused') AS browser, " +
+                    "	(friend.properties->>'locationip') AS locationIp, " +
+                    "	(friend.properties->>'email')::jsonb AS emails, " +
+                    "	(friend.properties->>'speaks')::jsonb AS languages, " +
+                    "	(friendcity.properties->>'name') AS cityName, " +
+                    "	COALESCE((SELECT jsonb_agg(array_to_json( " +
+                    "				array[(uni.properties->>'name') " +
+                    "					, (studyat.properties->>'classYear') " +
+                    "					, (unicity.properties->>'name')])::jsonb) " +
+                    "	 FROM ldbc.studyat AS studyat, ldbc.organization AS uni, ldbc.place AS unicity " +
+                    "	 WHERE p3f.id = (studyat.properties#>>'{personid}'::text[])::int8 " +
+                    "	   AND (studyat.properties#>>'{organid}'::text[])::int8 = (uni.properties#>>'{id}'::text[])::int8 " +
+                    "	   AND (uni.properties#>>'{place}'::text[])::int8 = (unicity.properties#>>'{id}'::text[])::int8 " +
+                    "	), jsonb_build_array('null'::jsonb)) AS unis, " +
+                    "	COALESCE((SELECT jsonb_agg(array_to_json( " +
+                    "      			array[(company.properties->>'name') " +
+                    "					, (workat.properties->>'workFrom') " +
+                    "					, (companycountry.properties->>'name')])::jsonb) " +
+                    "	 FROM ldbc.workat AS workat, ldbc.organization AS company, ldbc.place AS companycountry " +
+                    "	 WHERE p3f.id = (workat.properties#>>'{personid}'::text[])::int8 " +
+                    "	   AND (workat.properties#>>'{organid}'::text[])::int8 = (company.properties#>>'{id}'::text[])::int8 " +
+                    "      AND (company.properties#>>'{place}'::text[])::int8 = (companycountry.properties#>>'{id}'::text[])::int8 " +
+                    "  	), jsonb_build_array('null'::jsonb)) AS companies " +
+                    "FROM ( " +
+                    "   SELECT id, min(distance) AS distance " +
+                    "   FROM ( " +
+                    "   SELECT (f.properties#>>'{id}'::text[])::int8 AS id, 1 AS distance " +
+                    "	FROM Ldbc.knows AS k1, ldbc.person AS f " +
+                    "	WHERE (k1.properties#>>'{person1id}'::text[])::int8 = ? " +
+                    "	  AND (k1.properties#>>'{person2id}'::text[])::int8 = (f.properties#>>'{id}'::text[])::int8 " +
+                    "	  AND (f.properties#>>'{firstname}'::text[]) = ? " +
+                    "	UNION ALL " +
+                    "	SELECT (f.properties#>>'{id}'::text[])::int8 AS id, 2 AS distance " +
+                    "	FROM Ldbc.knows AS k1, ldbc.knows AS k2, ldbc.person AS f " +
+                    "	WHERE (k1.properties#>>'{person1id}'::text[])::int8 = ? " +
+                    "	  AND (k1.properties#>>'{person2id}'::text[])::int8 = (k2.properties#>>'{person1id}'::text[])::int8 " +
+                    "	  AND (k2.properties#>>'{person2id}'::text[])::int8 = (f.properties#>>'{id}'::text[])::int8 " +
+                    "	  AND (f.properties#>>'{firstname}'::text[]) = ? " +
+                    "	UNION ALL " +
+                    "	SELECT (f.properties#>>'{id}'::text[])::int8 AS id, 3 AS distance " +
+                    "	FROM ldbc.knows AS k1, ldbc.knows AS k2, ldbc.knows AS k3, ldbc.person AS f " +
+                    "	WHERE (k1.properties#>>'{person1id}'::text[])::int8 = ? " +
+                    "	  AND (k1.properties#>>'{person2id}'::text[])::int8 = (k2.properties#>>'{person1id}'::text[])::int8 " +
+                    "	  AND (k2.properties#>>'{person2id}'::text[])::int8 = (k3.properties#>>'{person1id}'::text[])::int8 " +
+                    "	  AND (k3.properties#>>'{person2id}'::text[])::int8 = (f.properties#>>'{id}'::text[])::int8 " +
+                    "	  AND (f.properties#>>'{firstname}'::text[]) = ? " +
+                    "  ) AS p3f " +
+                    "  GROUP BY id " +
+                    ") AS p3f, ldbc.person AS friend, ldbc.place AS friendcity " +
+                    "WHERE p3f.id = (friend.properties#>>'{id}'::text[])::int8 " +
+                    "  AND (friend.properties#>>'{place}'::text[])::int8 = (friendcity.properties#>>'{id}'::text[])::int8 " +
+                    "ORDER BY distance ASC, lastname ASC, p3f.id ASC " +
+                    "LIMIT ? ";
             ResultSet rs = client.executeQuery(stmt,
-                    ldbcQuery1.firstName(), ldbcQuery1.personId(), ldbcQuery1.limit(), ldbcQuery1.limit());
+                    ldbcQuery1.personId(), ldbcQuery1.firstName(),
+                    ldbcQuery1.personId(), ldbcQuery1.firstName(),
+                    ldbcQuery1.personId(), ldbcQuery1.firstName(),
+                    ldbcQuery1.limit());
 
             List<LdbcQuery1Result> resultList = new ArrayList<>();
             try {

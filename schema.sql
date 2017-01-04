@@ -243,62 +243,6 @@ options
 load from fdwForum as row
 create (:Forum =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
--- Message
-
---- Post (inherits Message)
-\set file_name :source_path/post_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPost;
-create foreign table fdwPost
-(
-	id int8,
-	imageFile varchar(80),
-	creationDate int8,
-	locationIP varchar(80),
-	browserUsed varchar(80),
-	lanaguage varchar(80),
-	content text,
-	length int4
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
-load from fdwPost as row
-create (:Post =jsonb_strip_nulls(row_to_json(row)::jsonb));
-
---- Comment (inherits Message)
-\set file_name :source_path/comment_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwComment;
-create foreign table fdwComment
-(
-	id int8,
-	creationDate int8,
-	locationIP varchar(80),
-	browserUsed varchar(80),
-	content varchar(2000),
-	length int4
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
-load from fdwComment as row
-create (:"Comment" =jsonb_strip_nulls(row_to_json(row)::jsonb));
-
 -- Organization
 \set file_name :source_path/organisation_0_0.csv
 \echo Start Loading :file_name
@@ -472,6 +416,196 @@ options
 load from fdwTagClass as row
 create (:TagClass =jsonb_strip_nulls(row_to_json(row)::jsonb));
 
+-- Message
+\set file_name :source_path/forum_containerOf_post_0_0.csv
+\echo Start Loading :file_name
+
+drop view post_view;
+drop view comment_view;
+
+drop foreign table fdwContainerOf;
+create foreign table fdwContainerOf
+(
+	forumId int8,
+	postId int8
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+\set file_name :source_path/post_hasCreator_person_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwPostHasCreator;
+create foreign table fdwPostHasCreator
+(
+	postId int8,
+	personId int8
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+\set file_name :source_path/comment_hasCreator_person_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwCommentHasCreator;
+create foreign table fdwCommentHasCreator
+(
+	commentId int8,
+	personId int8
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+\set file_name :source_path/post_isLocatedIn_place_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwPostIsLocatedIn;
+create foreign table fdwPostIsLocatedIn
+(
+	postId int8,
+	placeId int8
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+\set file_name :source_path/comment_isLocatedIn_place_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwCommentIsLocatedIn;
+create foreign table fdwCommentIsLocatedIn
+(
+	commentId int8,
+	placeId int8
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+--- Post (inherits Message)
+\set file_name :source_path/post_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwPost;
+create foreign table fdwPost
+(
+	id int8,
+	imageFile varchar(80),
+	creationDate int8,
+	locationIP varchar(80),
+	browserUsed varchar(80),
+	lanaguage varchar(80),
+	content text,
+	length int4
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+create view post_view AS 
+(
+	SELECT post.*, hc.personId, co.forumId, il.placeId
+	FROM
+		fdwPost post,
+		fdwPostHasCreator hc,
+                fdwContainerOf co,
+		fdwPostIsLocatedIn il
+        WHERE
+                post.id = hc.postId AND
+                post.id = co.postId AND
+		post.id = il.postId
+);
+
+LOAD FROM post_view AS row 
+MATCH (p:person), (f:forum), (pl:place)
+WHERE p.id::INT8 = (row).personId AND f.id::INT8 = (row).forumId AND pl.id::INT8 = (row).placeId
+CREATE (:post =
+        JSONB_SET(
+          JSONB_SET(JSONB_SET(JSONB_STRIP_NULLS(ROW_TO_JSON(row)::JSONB), 
+            '{gid_creator}', TO_JSONB(ID(p))), '{gid_forumid}', TO_JSONB(ID(f))), '{gid_place}', TO_JSONB(ID(pl))));
+
+
+--- Comment (inherits Message)
+\set file_name :source_path/comment_0_0.csv
+\echo Start Loading :file_name
+
+drop foreign table fdwComment;
+create foreign table fdwComment
+(
+	id int8,
+	creationDate int8,
+	locationIP varchar(80),
+	browserUsed varchar(80),
+	content varchar(2000),
+	length int4
+)
+server graph_import
+options
+(
+	 FORMAT 'csv',
+	 HEADER 'true',
+	 DELIMITER '|',
+	 NULL '',
+	 FILENAME :'file_name'
+);
+
+create view comment_view AS 
+(
+	SELECT c.*, hc.personId, il.placeId
+	FROM
+		fdwComment c,
+		fdwCommentHasCreator hc,
+		fdwCommentIsLocatedIn il
+        WHERE
+                c.id = hc.commentId AND
+		c.id = il.commentId
+);
+
+LOAD FROM comment_view as row
+MATCH (p:person), (pl:place)
+WHERE p.id::int8 = (row).personId AND pl.id::int8 = (row).placeId
+CREATE (:"Comment" = JSONB_SET(JSONB_SET(JSONB_STRIP_NULLS(ROW_TO_JSON(row)::JSONB),
+        '{gid_creator}', TO_JSONB(ID(p))), '{gid_place}', TO_JSONB(ID(pl))));
+
+
 -- Make property indexes for 'id' field of vertexes
 CREATE UNIQUE PROPERTY INDEX ON forum ((id::int8));
 CREATE UNIQUE PROPERTY INDEX ON message ((id::int8));
@@ -496,72 +630,18 @@ ANALYZE ldbc.tagclass;
 
 -- Edge
 --- containerOf
-\set file_name :source_path/forum_containerOf_post_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwContainerOf;
-create foreign table fdwContainerOf
-(
-	forumId int8,
-	postId int8
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
 load from fdwContainerOf as row
 match (r:Forum), (s:Post)
 where (r).id::int8 = (row).forumId and (s).id::int8 = (row).postId
 create (r)-[:containerOf]->(s);
 
 --- hasCreator (for Post)
-\set file_name :source_path/post_hasCreator_person_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPostHasCreator;
-create foreign table fdwPostHasCreator
-(
-	postId int8,
-	personId int8
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
 load from fdwPostHasCreator as row
 match (r:Post), (s:Person)
 where (r).id::int8 = (row).postId and (s).id::int8 = (row).personId
 create (r)-[:hasCreatorPost]->(s);
 
 --- hasCreator (for comment)
-\set file_name :source_path/comment_hasCreator_person_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwCommentHasCreator;
-create foreign table fdwCommentHasCreator
-(
-	commentId int8,
-	personId int8
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
 load from fdwCommentHasCreator as row
 match (r:"Comment"), (s:Person)
 where (r).id::int8 = (row).commentId and (s).id::int8 = (row).personId
@@ -761,48 +841,12 @@ where (r).id::int8 = (row).organId and (s).id::int8 = (row).placeId
 create (r)-[:isLocatedInOrgan]->(s);
 
 --- isLocatedIn (post)
-\set file_name :source_path/post_isLocatedIn_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwPostIsLocatedIn;
-create foreign table fdwPostIsLocatedIn
-(
-	postId int8,
-	placeId int8
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
 load from fdwPostIsLocatedIn as row
 match (r:Post), (s:Place)
 where (r).id::int8 = (row).postId and (s).id::int8 = (row).placeId
 create (r)-[:isLocatedInPost]->(s);
 
 --- isLocatedIn (comment)
-\set file_name :source_path/comment_isLocatedIn_place_0_0.csv
-\echo Start Loading :file_name
-
-drop foreign table fdwCommentIsLocatedIn;
-create foreign table fdwCommentIsLocatedIn
-(
-	commentId int8,
-	placeId int8
-)
-server graph_import
-options
-(
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
-);
 load from fdwCommentIsLocatedIn as row
 match (r:"Comment"), (s:Place)
 where (r).id::int8 = (row).commentId and (s).id::int8 = (row).placeId
@@ -1130,6 +1174,21 @@ create index on ldbc.workAt ("end", start, id);
 CREATE INDEX ON ldbc.person USING gin (properties jsonb_path_ops);
 CREATE INDEX ON ldbc.tag USING gin (properties jsonb_path_ops);
 CREATE INDEX ON ldbc.place USING gin (properties jsonb_path_ops);
+
+create property index post_fc_idx
+        on post (("gid_forumid"::graphid),("gid_creator"::graphid));
+
+create property index message_cc_idx
+        on message (("gid_creator"::graphid), ("creationdate"::int8));
+create property index post_cc_idx
+        on post (("gid_creator"::graphid),("creationdate"::int8));
+create property index comment_cc_idx
+        on "Comment" (("gid_creator"::graphid),("creationdate"::int8));
+
+cluster verbose ldbc.message using message_cc_idx;
+cluster verbose ldbc.post using post_cc_idx;
+cluster verbose ldbc."Comment" using comment_cc_idx;
+
 
 -- make indexes on message.creationDate, message.id
 CREATE PROPERTY INDEX ON message ( (creationDate::int8) DESC, (id::int8) ASC );

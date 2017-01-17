@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # Usage: run_test.sh [DBNAME] [PORT] [USER] [DATAPATH]
+#
+# Please make and modify ldbc-test.properties using ldbc-test.properties.template file
 
 DBNAME=$1
 PORT=$2
@@ -16,7 +18,6 @@ echo " ========================================= "
 # according to the data scale factor
 #
 # -P ../ldbc_driver/configuration/ldbc/snb/interactive/ldbc_snb_interactive_SF-0001.properties
-#
 
 java -cp target/classes/jeeves-0.3-SNAPSHOT.jar:target/classes/agensgraph-jdbc-0.9.0-SNAPSHOT.jar:target/classes com.ldbc.driver.Client \
 -P ldbc-test.properties \

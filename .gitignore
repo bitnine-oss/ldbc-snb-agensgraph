@@ -24,6 +24,13 @@ buildNumber.properties
 LDBC_SNB_RESULTS/
 validation*.csv
 validation*.json
+validation_set/
+load.conf
+validation.conf
+
+ag_jdbc.properties
+ag_jdbc_validation.properties
+datapath.sql
 
 # Ignore folders used to build binaries for old Java
 /pgjdbc-jre6

@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# Usage: run_validation.sh [PORT] [USER]
+# should be run by AgensGraph's superuser
+
+PORT=$1
+USER=$2
+DATAPATH=`pwd`/validation_set/social_network/num_date
 
 echo " ========================================= "
 echo " AgensGraph LDBC validation running script "
@@ -16,25 +23,23 @@ then
   tar zxf neo4j--validation_set.tar.gz -C validation_set
 fi
 
-if [ ! -f "ag_jdbc_validation.properties" ];
-then
-  echo " [Error] Cannot find 'ag_jdbc_validation.properties'. "
-  echo " [Error] Copy and modify 'ag_jdbc.properties.template' to make 'ag_jdbc_validation.properties'. "
-  exit 1
-fi
+dropdb -p $PORT agensgraph_ldbc_validation
+createdb -p $PORT --lc-collate='C' --template=template0 agensgraph_ldbc_validation
 
-if [ ! -f "load_validation.sql" ];
-then
-  echo " [Error] Cannot find 'load_validation.sql'. "
-  echo " [Error] Copy and modify 'load.sql.template' to make 'load_validation.sql'. "
-  exit 1
-fi
+cat > validation.conf <<EOF
+DBNAME=agensgraph_ldbc_validation
+PORT=$PORT
+USER=$USER
+DATAPATH=$DATAPATH
+EOF
 
-source ag_jdbc_validation.properties
-
-ag-shell -d $dbname -p $port -U $user -f load_validation.sql
+./load.sh validation.conf
 
 java -cp target/classes/jeeves-0.3-SNAPSHOT.jar:target/classes/agensgraph-jdbc-0.9.0-SNAPSHOT.jar:target/classes com.ldbc.driver.Client \
 -P ldbc_snb_validation.properties -P ag_jdbc_validation.properties \
+-p ldbc.snb.interactive.dbname agensgraph_ldbc_validation \
+-p ldbc.snb.interactive.port $PORT \
+-p ldbc.snb.interactive.user $USER \
+-p ldbc.snb.interactive.validate_database validation_set/validation_params.csv \
 -p ldbc.snb.interactive.parameters_dir validation_set/substitution_parameters \
--p ldbc.snb.interactive.updates_dir validation_set/social_network
+-p ldbc.snb.interactive.updates_dir validation_set/social_network 2>ldbc_validation_err.log

@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Usage: run_test.sh [DBNAME] [PORT] [USER] [DATAPATH]
+
+DBNAME=$1
+PORT=$2
+USER=$3
+DATAPATH=$4
+
+echo " ========================================= "
+echo " AgensGraph LDBC test running script "
+echo " ========================================= "
+
+# It is highly recommended to add LDBC driver's default properties file 
+# using '-P' option in the following command 
+# according to the data scale factor
+#
+# -P ../ldbc_driver/configuration/ldbc/snb/interactive/ldbc_snb_interactive_SF-0001.properties
+#
+
+java -cp target/classes/jeeves-0.3-SNAPSHOT.jar:target/classes/agensgraph-jdbc-0.9.0-SNAPSHOT.jar:target/classes com.ldbc.driver.Client \
+-P ldbc-test.properties \
+-p ldbc.snb.interactive.dbname $DBNAME \
+-p ldbc.snb.interactive.port $PORT \
+-p ldbc.snb.interactive.user $USER \
+-p ldbc.snb.interactive.parameters_dir $DATAPATH/substitution_parameters \
+-p ldbc.snb.interactive.updates_dir $DATAPATH/social_network \
+2>ldbc_test_err.log

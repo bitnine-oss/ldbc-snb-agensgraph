@@ -1,0 +1,4 @@
+CREATE EXTENSION file_fdw;
+CREATE SERVER graph_import FOREIGN DATA WRAPPER file_fdw;
+
+CREATE EXTENSION pg_prewarm;

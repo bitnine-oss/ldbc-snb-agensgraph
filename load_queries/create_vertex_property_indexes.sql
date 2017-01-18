@@ -12,10 +12,6 @@ VALUES
 ($$CREATE INDEX ON ldbc.person USING gin (properties JSONB_path_ops)$$),
 ($$CREATE INDEX ON ldbc.tag USING gin (properties JSONB_path_ops)$$),
 ($$CREATE INDEX ON ldbc.place USING gin (properties JSONB_path_ops)$$),
-($$CREATE PROPERTY INDEX post_fc_idx ON post (("gid_forumid"::GRAPHID),("gid_creator"::GRAPHID))$$),
-($$CREATE PROPERTY INDEX message_cc_idx ON message (("gid_creator"::GRAPHID), ("creationdate"::INT8))$$),
-($$CREATE PROPERTY INDEX post_cc_idx ON post (("gid_creator"::GRAPHID),("creationdate"::INT8))$$),
-($$CREATE PROPERTY INDEX comment_cc_idx ON "Comment" (("gid_creator"::GRAPHID),("creationdate"::INT8))$$),
 ($$CREATE PROPERTY INDEX ON message ( (creationDate::INT8) DESC, (id::INT8) ASC )$$),
 ($$CREATE PROPERTY INDEX ON post ( (creationDate::INT8) DESC, (id::INT8) ASC )$$),
 ($$CREATE PROPERTY INDEX ON "Comment" ( (creationDate::INT8) DESC, (id::INT8) ASC )$$)) queries;

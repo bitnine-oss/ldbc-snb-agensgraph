@@ -203,17 +203,13 @@ public class AGDb extends Db {
 	          "MATCH (person:Person)-[:knows*1..2]->(friend) " + 
 		      "WHERE person.id::int8 = " + ldbcQuery3.personId() + " AND id(person) != id(friend) " +
 		      "WITH DISTINCT friend " +
-	          "MATCH (friend), (messageX:Message), (countryX:Place {name: '" + ldbcQuery3.countryXName() + "'}) " +
-		      "WHERE id(friend) = messageX.gid_creator::graphid " +
-                      "  AND id(countryX) = messageX.gid_place::graphid " +
-                      "  AND not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryX)) " +
+	          "MATCH (friend)<-[:hasCreator]-(messageX:Message)-[:isLocatedInMsg]->(countryX:Place {name: '" + ldbcQuery3.countryXName() + "'}) " +
+		      "WHERE not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryX)) " +
 		      "  AND messageX.creationDate::int8 >= " + ldbcQuery3.startDate().getTime() + " " +
 		      "  AND messageX.creationDate::int8 < " + endDate.getTime() + " " +
 		      "WITH friend, count(DISTINCT messageX) AS xCount " +
-		      "MATCH (friend), (messageY:Message), (countryY:Place {name: '" + ldbcQuery3.countryYName() + "'}) " +
-		      "WHERE id(friend) = messageY.gid_creator::graphid " +
-                      "  AND id(countryY) = messageY.gid_place::graphid " +
-		      "  AND not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryY)) " +
+		      "MATCH (friend)<-[:hasCreator]-(messageY:Message)-[:isLocatedInMsg]->(countryY:Place {name: '" + ldbcQuery3.countryYName() + "'}) " +
+		      "WHERE not exists ((friend)-[:isLocatedInPerson]->()-[:isPartOf]->(countryY)) " +
 		      "  AND messageY.creationDate::int8 >= " + ldbcQuery3.startDate().getTime() + " " +
 		      "  AND messageY.creationDate::int8 < " + endDate.getTime() + " " +
 		      "WITH " +
@@ -308,8 +304,7 @@ public class AGDb extends Db {
 		    		"WITH DISTINCT friend " +
 		    		"MATCH (friend)<-[membership:hasMember]-(forum:Forum) " +
                     "WHERE membership.\"joinDate\"::int8 > " + ldbcQuery5.minDate().getTime() + " " +
-                    "OPTIONAL MATCH (friend), (post:Post), (forum) " +
-                    "WHERE id(friend) = post.gid_creator::graphid AND id(forum) = post.gid_forumid::graphid " +
+                    "OPTIONAL MATCH (friend)<-[:hasCreatorPost]-(post:Post)<-[:containerOf]-(forum) " +
 		    		"WITH forum.id::int8 AS forumid, forum.title AS forumTitle, count(id(post)) AS postcount " +
 		    		"ORDER BY postCount DESC, forumid ASC " +
 		    		"RETURN forumTitle, postCount " +

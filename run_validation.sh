@@ -36,10 +36,10 @@ EOF
 ./load.sh validation.conf
 
 java -cp target/classes/jeeves-0.3-SNAPSHOT.jar:target/classes/agensgraph-jdbc-0.9.0-SNAPSHOT.jar:target/classes com.ldbc.driver.Client \
--P ldbc_snb_validation.properties -P ag_jdbc_validation.properties \
--p ldbc.snb.interactive.dbname agensgraph_ldbc_validation \
--p ldbc.snb.interactive.port $PORT \
--p ldbc.snb.interactive.user $USER \
--p ldbc.snb.interactive.validate_database validation_set/validation_params.csv \
+-P validation.properties \
+-p dbname agensgraph_ldbc_validation \
+-p port $PORT \
+-p user $USER \
+-p validate_database validation_set/validation_params.csv \
 -p ldbc.snb.interactive.parameters_dir validation_set/substitution_parameters \
 -p ldbc.snb.interactive.updates_dir validation_set/social_network 2>ldbc_validation_err.log

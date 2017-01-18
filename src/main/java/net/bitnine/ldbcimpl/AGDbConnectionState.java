@@ -14,15 +14,18 @@ public class AGDbConnectionState extends DbConnectionState {
 
     public AGDbConnectionState(Map<String, String> properties) {
         String server = properties.get("server");
+		System.out.println("Server: " + server);
         if (server == null)
             server = "127.0.0.1";
         String port = properties.get("port");
+		System.out.println("Port: " + port);
         if (port == null)
             port = "5432";
         String connStr = "jdbc:agensgraph://"
                 + server + ":"
                 + port + "/"
                 + properties.get("dbname");
+		System.out.println("connStr: " + connStr);
         client = ThreadLocal.withInitial(() -> {
             return new AGClient(connStr, properties.get("user"), properties.get("password"));
         });

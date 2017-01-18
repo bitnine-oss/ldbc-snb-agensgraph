@@ -761,28 +761,3 @@ CREATE VIEW person_view AS (
 	ON p.id = l.id
 );
 
-CREATE VIEW comment_view AS 
-(
-	SELECT c.*, hc.personId, il.placeId
-	FROM
-		fdwComment c,
-		fdwCommentHasCreator hc,
-		fdwCommentIsLocatedIn il
-    WHERE
-        c.id = hc.commentId AND c.id = il.commentId
-);
-
-CREATE VIEW post_view AS 
-(
-    SELECT post.*, hc.personId, co.forumId, il.placeId
-    FROM
-        fdwPost post,
-        fdwPostHasCreator hc,
-        fdwContainerOf co,
-        fdwPostIsLocatedIn il
-    WHERE
-        post.id = hc.postId AND
-        post.id = co.postId AND
-        post.id = il.postId
-);
-

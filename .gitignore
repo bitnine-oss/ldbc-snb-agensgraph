@@ -32,6 +32,13 @@ ag_jdbc.properties
 ag_jdbc_validation.properties
 datapath.sql
 
+ldbc-test.properties
+ldbc_loading.log
+ldbc_test_err.log
+ldbc_validation_err.log
+load_output.log
+run_test.sh
+
 # Ignore folders used to build binaries for old Java
 /pgjdbc-jre6
 /pgjdbc-jre7

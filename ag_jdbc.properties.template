@@ -1,5 +1,0 @@
-server=localhost
-port=5432
-dbname=agensgraph
-user=bitnine
-password=

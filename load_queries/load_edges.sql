@@ -16,7 +16,7 @@ VALUES
    MATCH (r:Person), (s:Tag)
    WHERE (r).id::INT8 = (row).personId and (s).id::INT8 = (row).tagId
    CREATE (r)-[:hasInterest]->(s)$$),
-($$LOAD FROM fdwHasMember as row
+($$LOAD FROM viewHasMember as row
    MATCH (r:Forum), (s:Person)
    WHERE (r).id::INT8 = (row).forumId and (s).id::INT8 = (row).personId
    CREATE (r)-[:hasMember {'joinDate': (row).joinDate}]->(s)$$),
@@ -64,16 +64,16 @@ VALUES
    MATCH (r:TagClass), (s:TagClass)
    WHERE (r).id::INT8 = (row).tagclass1Id and (s).id::INT8 = (row).tagclass2Id
    CREATE (r)-[:isSubclassOf]->(s)$$),
-($$LOAD FROM fdwKnows as row
+($$LOAD FROM viewKnows as row
    MATCH (r:Person), (s:Person)
    WHERE (r).id::INT8 = (row).person1Id and (s).id::INT8 = (row).person2Id
    CREATE (r)-[:knows {'creationDate': (row).creationDate}]->(s)
    CREATE (s)-[:knows {'creationDate': (row).creationDate}]->(r)$$),
-($$LOAD FROM fdwLikesPost as row
+($$LOAD FROM viewLikesPost as row
    MATCH (r:Person), (s:Post)
    WHERE (r).id::INT8 = (row).personId and (s).id::INT8 = (row).postId
    CREATE (r)-[:likesPost {'creationDate': (row).creationDate}]->(s)$$),
-($$LOAD FROM fdwLikesComment as row
+($$LOAD FROM viewLikesComment as row
    MATCH (r:Person), (s:"Comment")
    WHERE (r).id::INT8 = (row).personId and (s).id::INT8 = (row).commentId
    CREATE (r)-[:likesComment {'creationDate': (row).creationDate}]->(s)$$),

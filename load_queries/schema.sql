@@ -91,11 +91,12 @@ ALTER ELABEL workAt SET UNLOGGED;
 -- Forum
 \set file_name :source_path/forum_0_0.csv
 DROP FOREIGN TABLE IF EXISTS fdwForum CASCADE;
+DROP VIEW viewForum;
 CREATE FOREIGN TABLE fdwForum
 (
 	id INT8,
 	title VARCHAR(256),
-	creationDate INT8
+	creationDate TIMESTAMPTZ
 )
 SERVER graph_import
 OPTIONS
@@ -105,6 +106,13 @@ OPTIONS
 	 DELIMITER '|',
 	 NULL '',
 	 FILENAME :'file_name'
+);
+CREATE VIEW viewForum AS (
+SELECT 
+	id,
+	title,
+	EXTRACT(EPOCH FROM creationDate) * 1000 AS creationDate
+FROM fdwForum
 );
 
 -- Organization
@@ -121,11 +129,11 @@ CREATE FOREIGN TABLE fdwOrganization
 SERVER graph_import
 OPTIONS
 (
-	 FORMAT 'csv',
-	 HEADER 'true',
-	 DELIMITER '|',
-	 NULL '',
-	 FILENAME :'file_name'
+	FORMAT 'csv',
+	HEADER 'true',
+	DELIMITER '|',
+	NULL '',
+	FILENAME :'file_name'
 );
 
 -- Person
@@ -138,8 +146,8 @@ CREATE FOREIGN TABLE fdwPerson
 	firstName VARCHAR(80),
 	lastName VARCHAR(80),
 	gender VARCHAR(6),
-	birthday INT8,
-	creationDate INT8,
+	birthday TIMESTAMPTZ,
+	creationDate TIMESTAMPTZ,
 	locationIP VARCHAR(80),
 	browserUsed VARCHAR(80)
 )
@@ -176,6 +184,7 @@ OPTIONS
 \set file_name :source_path/person_speaks_language_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwLanguage;
+DROP VIEW viewPerson;
 CREATE FOREIGN TABLE fdwLanguage
 (
 	id INT8,
@@ -189,6 +198,27 @@ OPTIONS
 	 DELIMITER '|',
 	 NULL '',
 	 FILENAME :'file_name'
+);
+
+CREATE VIEW viewPerson AS (
+    SELECT 
+		p.id AS id,
+		firstName,
+		lastName,
+		gender,
+		EXTRACT(EPOCH FROM birthday) * 1000 as birthday,
+		EXTRACT(EPOCH FROM creationDate) * 1000 as creationDate,
+		locationIP,
+		browserUsed,
+        email, speaks
+    FROM
+        fdwPerson p 
+	LEFT OUTER JOIN
+	    (SELECT id, ARRAY_AGG(email) email FROM fdwEmail GROUP BY id) e 
+	ON p.id = e.id 
+	LEFT OUTER JOIN
+	    (SELECT id, ARRAY_AGG(language) speaks FROM fdwLanguage GROUP BY id) l 
+	ON p.id = l.id
 );
 
 -- Place
@@ -257,11 +287,12 @@ OPTIONS
 \set file_name :source_path/post_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwPost CASCADE;
+DROP VIEW viewPost;
 CREATE FOREIGN TABLE fdwPost
 (
 	id INT8,
 	imageFile VARCHAR(80),
-	creationDate INT8,
+	creationDate TIMESTAMPTZ,
 	locationIP VARCHAR(80),
 	browserUsed VARCHAR(80),
 	lanaguage VARCHAR(80),
@@ -277,15 +308,27 @@ OPTIONS
 	 NULL '',
 	 FILENAME :'file_name'
 );
+CREATE VIEW viewPost AS (
+SELECT
+	id,
+	imageFile,
+	EXTRACT(EPOCH FROM creationDate) * 1000 as creationDate,
+	locationIP,
+	browserUsed,
+	lanaguage,
+	content,
+	length
+FROM fdwPost);
 
 --- Comment (inherits Message)
 \set file_name :source_path/comment_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwComment CASCADE;
+DROP VIEW viewComment;
 CREATE FOREIGN TABLE fdwComment
 (
 	id INT8,
-	creationDate INT8,
+	creationDate TIMESTAMPTZ,
 	locationIP VARCHAR(80),
 	browserUsed VARCHAR(80),
 	content VARCHAR(2000),
@@ -300,6 +343,15 @@ OPTIONS
 	 NULL '',
 	 FILENAME :'file_name'
 );
+CREATE VIEW viewComment AS (
+SELECT
+	id,
+	EXTRACT(EPOCH FROM creationDate) * 1000 as creationDate,
+	locationIP,
+	browserUsed,
+	content,
+	length
+FROM fdwComment);
 
 -- Edge
 --- containerOf
@@ -382,11 +434,12 @@ OPTIONS
 \set file_name :source_path/forum_hasMember_person_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwHasMember CASCADE;
+DROP VIEW viewHasMember;
 CREATE FOREIGN TABLE fdwHasMember
 (
 	forumId INT8,
 	personId INT8,
-	joinDate INT8
+	joinDate TIMESTAMPTZ
 )
 SERVER graph_import
 OPTIONS
@@ -397,6 +450,12 @@ OPTIONS
 	 NULL '',
 	 FILENAME :'file_name'
 );
+CREATE VIEW viewHasMember AS (
+SELECT
+	forumId,
+	personId,
+	EXTRACT(EPOCH FROM joinDate) * 1000 AS joinDate
+FROM fdwHasMember);
 
 --- hasModerator
 \set file_name :source_path/forum_hasModerator_person_0_0.csv
@@ -612,11 +671,12 @@ OPTIONS
 \set file_name :source_path/person_knows_person_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwKnows CASCADE;
+DROP VIEW viewKnows;
 CREATE FOREIGN TABLE fdwKnows
 (
 	person1Id INT8,
 	person2Id INT8,
-	creationDate INT8
+	creationDate TIMESTAMPTZ 
 )
 SERVER graph_import
 OPTIONS
@@ -627,16 +687,24 @@ OPTIONS
 	 NULL '',
 	 FILENAME :'file_name'
 );
+CREATE VIEW viewKnows AS (
+SELECT
+	person1Id,
+	person2Id,
+	EXTRACT(EPOCH FROM creationDate) * 1000 AS creationDate
+FROM
+	fdwKnows);
 
 --- likes (post)
 \set file_name :source_path/person_likes_post_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwLikesPost CASCADE;
+DROP VIEW viewLikesPost;
 CREATE FOREIGN TABLE fdwLikesPost
 (
 	personId INT8,
 	postId INT8,
-	creationDate INT8
+	creationDate TIMESTAMPTZ 
 )
 SERVER graph_import
 OPTIONS
@@ -647,16 +715,24 @@ OPTIONS
 	 NULL '',
 	 FILENAME :'file_name'
 );
+CREATE VIEW viewLikesPost AS (
+SELECT
+	personId,
+	postId,
+	EXTRACT(EPOCH FROM creationDate) * 1000 AS creationDate
+FROM
+	fdwLikesPost);
 
 --- likes (comment)
 \set file_name :source_path/person_likes_comment_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwLikesComment CASCADE;
+DROP VIEW viewLikesComment;
 CREATE FOREIGN TABLE fdwLikesComment
 (
 	personId INT8,
 	commentId INT8,
-	creationDate INT8
+	creationDate TIMESTAMPTZ 
 )
 SERVER graph_import
 OPTIONS
@@ -667,6 +743,13 @@ OPTIONS
 	 NULL '',
 	 FILENAME :'file_name'
 );
+CREATE VIEW viewLikesComment AS (
+SELECT
+	personId,
+	commentId,
+	EXTRACT(EPOCH FROM creationDate) * 1000 AS creationDate
+FROM
+	fdwLikesComment);
 
 --- replyOf (post)
 \set file_name :source_path/comment_replyOf_post_0_0.csv
@@ -744,20 +827,5 @@ OPTIONS
 	 DELIMITER '|',
 	 NULL '',
 	 FILENAME :'file_name'
-);
-
------------------------------------------
--- VIEW for Denormalized Edges
------------------------------------------
-CREATE VIEW person_view AS (
-    SELECT p.*, email, speaks
-    FROM
-        fdwPerson p 
-	LEFT OUTER JOIN
-	    (SELECT id, ARRAY_AGG(email) email FROM fdwEmail GROUP BY id) e 
-	ON p.id = e.id 
-	LEFT OUTER JOIN
-	    (SELECT id, ARRAY_AGG(language) speaks FROM fdwLanguage GROUP BY id) l 
-	ON p.id = l.id
 );
 

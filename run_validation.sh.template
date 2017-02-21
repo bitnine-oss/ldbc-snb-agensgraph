@@ -1,16 +1,27 @@
 #!/bin/bash
+# 
+# A template for LDBC validation script
 #
-# Usage: run_validation.sh [PORT] [USER]
-# should be run by AgensGraph's superuser
+# Usage: Copy this template, modify the copied one to fill out information needed
+#        change its permission (chmod +x [filename]) and run it.
+#
+# Note:  This script should be run by AgensGraph's superuser
+#        because it will create a temp database (agensgraph_ldbc_validation)
 
-PORT=$1
-USER=$2
+# Modify this variables
+PORT=
+USER=
 DATAPATH=`pwd`/validation_set/social_network/num_date
 
 echo " ========================================= "
 echo " AgensGraph LDBC validation running script "
 echo " ========================================= "
 echo
+
+if [ -z "$PORT" ] || [ -z "$USER" ]; then 
+  echo "[ERROR] Fill out the empty variables (PORT, USER)."
+  exit 1
+fi
 
 if [ ! -d "validation_set" ];
 then
@@ -33,7 +44,8 @@ USER=$USER
 DATAPATH=$DATAPATH
 EOF
 
-./load.sh validation.conf
+load_queries/load.sh validation.conf
+rm -f validation.conf
 
 java -cp target/classes/jeeves-0.3-SNAPSHOT.jar:target/classes/agensgraph-jdbc-0.9.0-SNAPSHOT.jar:target/classes com.ldbc.driver.Client \
 -P validation.properties \

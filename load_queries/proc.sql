@@ -160,8 +160,6 @@ begin
 		small_ids := array_append(small_ids, small);
 		big_ids := array_append(big_ids, big);
 	end loop;
-	raise notice 'small_ids(%)', small_ids;
-	raise notice 'big_ids(%)', big_ids;
 	select sum((select weight
 			from c14_weight where p1 = s and p2 = b)) into all_weight
 	from unnest(small_ids, big_ids) as x (s, b);

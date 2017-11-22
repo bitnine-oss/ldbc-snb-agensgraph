@@ -1,6 +1,6 @@
 \timing on
 
-DROP GRAPH ldbc CASCADE;
+DROP GRAPH IF EXISTS ldbc CASCADE;
 CREATE GRAPH ldbc;
 SET GRAPH_PATH = ldbc;
 ALTER DATABASE :target_db SET graph_path = ldbc ;
@@ -91,7 +91,7 @@ ALTER ELABEL workAt SET UNLOGGED;
 -- Forum
 \set file_name :source_path/forum_0_0.csv
 DROP FOREIGN TABLE IF EXISTS fdwForum CASCADE;
-DROP VIEW viewForum;
+DROP VIEW IF EXISTS viewForum;
 CREATE FOREIGN TABLE fdwForum
 (
 	id INT8,
@@ -184,7 +184,7 @@ OPTIONS
 \set file_name :source_path/person_speaks_language_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwLanguage;
-DROP VIEW viewPerson;
+DROP VIEW IF EXISTS viewPerson;
 CREATE FOREIGN TABLE fdwLanguage
 (
 	id INT8,
@@ -287,7 +287,7 @@ OPTIONS
 \set file_name :source_path/post_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwPost CASCADE;
-DROP VIEW viewPost;
+DROP VIEW IF EXISTS viewPost;
 CREATE FOREIGN TABLE fdwPost
 (
 	id INT8,
@@ -324,7 +324,7 @@ FROM fdwPost);
 \set file_name :source_path/comment_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwComment CASCADE;
-DROP VIEW viewComment;
+DROP VIEW IF EXISTS viewComment;
 CREATE FOREIGN TABLE fdwComment
 (
 	id INT8,
@@ -434,7 +434,7 @@ OPTIONS
 \set file_name :source_path/forum_hasMember_person_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwHasMember CASCADE;
-DROP VIEW viewHasMember;
+DROP VIEW IF EXISTS viewHasMember;
 CREATE FOREIGN TABLE fdwHasMember
 (
 	forumId INT8,
@@ -671,7 +671,7 @@ OPTIONS
 \set file_name :source_path/person_knows_person_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwKnows CASCADE;
-DROP VIEW viewKnows;
+DROP VIEW IF EXISTS viewKnows;
 CREATE FOREIGN TABLE fdwKnows
 (
 	person1Id INT8,
@@ -699,7 +699,7 @@ FROM
 \set file_name :source_path/person_likes_post_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwLikesPost CASCADE;
-DROP VIEW viewLikesPost;
+DROP VIEW IF EXISTS viewLikesPost;
 CREATE FOREIGN TABLE fdwLikesPost
 (
 	personId INT8,
@@ -727,7 +727,7 @@ FROM
 \set file_name :source_path/person_likes_comment_0_0.csv
 
 DROP FOREIGN TABLE IF EXISTS fdwLikesComment CASCADE;
-DROP VIEW viewLikesComment;
+DROP VIEW IF EXISTS viewLikesComment;
 CREATE FOREIGN TABLE fdwLikesComment
 (
 	personId INT8,

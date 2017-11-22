@@ -1,5 +1,5 @@
 -- pre_eval weights
-DROP IF EXISTS TABLE c14_weight;
+DROP TABLE IF EXISTS c14_weight;
 CREATE UNLOGGED TABLE c14_weight(p1 INT8, p2 INT8, weight double precision);
 INSERT INTO c14_weight
     SELECT p1, p2, SUM(inc) FROM (

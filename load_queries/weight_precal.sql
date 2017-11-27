@@ -8,18 +8,18 @@ INSERT INTO c14_weight
                 THEN rep_creator ELSE org_creator END AS p1,
             CASE when rep_creator < org_creator
                 THEN org_creator ELSE rep_creator END AS p2,
-            inc
+            inc::int8
         FROM
 		(
             MATCH
             (p1:Person)<-[:hasCreatorComment]-(c)-[:replyOfPost]->(m)-[:hasCreatorPost]->(p2:Person)
 			, (p1:Person)-[:knows]->(p2:Person)
-			RETURN p1.id::INT8 AS rep_creator, p2.id::INT8 AS org_creator, 1.0 AS inc
+			RETURN p1.id AS rep_creator, p2.id AS org_creator, 1.0 AS inc
             UNION ALL
             MATCH
             (p1:Person)<-[:hasCreatorComment]-(c)-[:replyOfComment]->(m)-[:hasCreatorComment]->(p2:Person)
 			, (p1:Person)-[:knows]->(p2:Person)
-			RETURN p1.id::INT8 AS rep_creator, p2.id::INT8 AS org_creator, 0.5
+			RETURN p1.id AS rep_creator, p2.id AS org_creator, 0.5
         ) AS x
     ) AS x
     GROUP BY p1, p2;

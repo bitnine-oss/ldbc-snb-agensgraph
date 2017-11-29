@@ -167,6 +167,35 @@ begin
 end
 $$ language plpgsql;
 
+create or replace function get_weight2 (node_ids vertex[])
+returns double precision as $$
+declare
+	all_weight double precision;
+	small_ids int8[];
+	big_ids int8[];
+	small int8;
+	big int8;
+	tmp int8;
+begin
+	all_weight := 0.0;
+	for i in 1..array_length(node_ids, 1) - 1 loop
+		small = CAST(node_ids[i].properties::jsonb->'id' AS int8);
+		big = CAST(node_ids[i+1].properties::jsonb->'id' AS int8);
+		if small > big then
+			tmp := small;
+			small := big;
+			big := tmp;
+		end if;
+		small_ids := array_append(small_ids, small);
+		big_ids := array_append(big_ids, big);
+	end loop;
+	select sum((select weight
+			from c14_weight where p1 = s and p2 = b)) into all_weight
+	from unnest(small_ids, big_ids) as x (s, b);
+	return all_weight;
+end
+$$ language plpgsql;
+
 create or replace function extract_ids(node_ids int8[])
 returns jsonb as $$
 declare
@@ -179,6 +208,21 @@ begin
 	end loop;
 
 	return array_to_json(arr)::jsonb;
+end
+$$ language plpgsql;
+
+create or replace function extract_ids2(node_ids vertex[])
+returns jsonb as $$
+declare
+        id vertex;
+        arr int8[];
+begin
+        foreach id in array node_ids
+        loop
+                arr = array_append(arr, CAST(id.properties::jsonb->'id' AS int8));
+        end loop;
+        
+        return array_to_json(arr)::jsonb;
 end
 $$ language plpgsql;
 

@@ -1,7 +1,7 @@
 package net.bitnine.ldbcimpl;
 
-import net.bitnine.agensgraph.graph.property.JsonObject;
-import net.bitnine.agensgraph.graph.property.Jsonb;
+import net.bitnine.agensgraph.util.Jsonb;
+import net.bitnine.agensgraph.util.JsonbUtil;
 import net.bitnine.ldbcimpl.excpetions.AGClientException;
 
 import java.sql.*;
@@ -77,8 +77,6 @@ public class AGClient {
             } else if (param instanceof Integer) {
                 pstmt.setInt(i, (Integer) param);
             } else if (param instanceof Jsonb) {
-                pstmt.setObject(i, param);
-            } else if (param instanceof JsonObject) {
                 pstmt.setObject(i, param);
             } else if (param instanceof Array) {
                 pstmt.setArray(i, (Array)param);

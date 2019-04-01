@@ -76,11 +76,14 @@ public class AGDb extends Db {
                                      DbConnectionState dbConnectionState,
                                      ResultReporter resultReporter) throws DbException {
             AGClient client = ((AGDbConnectionState) dbConnectionState).getClent();
-            
+
+            // To improve the speed of LongQuery1, set the enable_nestloop option to off
+            client.execute("SET enable_nestloop TO off");
             ResultSet rs = client.executeLongQuery1( ldbcQuery1.firstName(),
 													 ldbcQuery1.personId(),
 													 ldbcQuery1.limit() );
-            
+            client.execute("SET enable_nestloop TO on");
+
             List<LdbcQuery1Result> resultList = new ArrayList<>();
             try {
                 while (rs.next()) {
